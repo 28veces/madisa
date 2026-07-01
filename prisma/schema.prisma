@@ -1,0 +1,283 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String?
+  role         UserRole  @default(ADMIN)
+  businessId   String?
+  business     Business? @relation(fields: [businessId], references: [id])
+  createdAt    DateTime  @default(now())
+}
+
+model Business {
+  id             String       @id @default(cuid())
+  name           String
+  slug           String       @unique
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  users          User[]
+  products       Product[]
+  sales          Sale[]
+  purchases      Purchase[]
+  suppliers      Supplier[]
+  inventoryItems InventoryItem[]
+  partners       Partner[]
+  investments    Investment[]
+  expenses       Expense[]
+}
+
+model Product {
+  id              String         @id @default(cuid())
+  name            String
+  description     String?
+  category        Category
+  material        String
+  technique       Technique
+  basePrice       Float
+  imageUrl        String?
+  isActive        Boolean        @default(true)
+  businessId      String
+  business        Business       @relation(fields: [businessId], references: [id])
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  purchaseItems   PurchaseItem[]
+
+  @@index([businessId])
+}
+
+model Sale {
+  id           String        @id @default(cuid())
+  clientName   String
+  clientPhone  String?
+  notes        String?
+  totalAmount  Float
+  status       SaleStatus    @default(PENDING)
+  businessLine BusinessLine?
+  deliveredAt  DateTime?
+  businessId   String
+  business     Business      @relation(fields: [businessId], references: [id])
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  items        SaleItem[]
+
+  @@index([businessId])
+}
+
+model SaleItem {
+  id              String        @id @default(cuid())
+  saleId          String
+  inventoryItemId String
+  quantity        Int
+  unitPrice       Float
+  productionCost  Float         @default(0)
+  customization   String?
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  sale            Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+}
+
+model Partner {
+  id            String                   @id @default(cuid())
+  name          String
+  percentage    Float
+  order         Int                      @default(0)
+  businessId    String
+  business      Business                 @relation(fields: [businessId], references: [id])
+  contributions InvestmentContribution[]
+  createdAt     DateTime                 @default(now())
+
+  @@index([businessId])
+}
+
+model InvestmentContribution {
+  id           String     @id @default(cuid())
+  investmentId String
+  partnerId    String
+  amount       Float
+  investment   Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  partner      Partner    @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([investmentId, partnerId])
+  @@index([investmentId])
+  @@index([partnerId])
+}
+
+model Supplier {
+  id             String                  @id @default(cuid())
+  name           String
+  phone          String?
+  email          String?
+  address        String?
+  branch         String?
+  isActive       Boolean                 @default(true)
+  businessId     String
+  business       Business                @relation(fields: [businessId], references: [id])
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  inventoryItems InventoryItemSupplier[]
+  purchases      Purchase[]
+
+  @@index([businessId])
+}
+
+model InventoryItem {
+  id            String                  @id @default(cuid())
+  code          String                  @unique
+  description   String
+  category      PurchaseCategory
+  note          String?
+  isActive      Boolean                 @default(true)
+  businessId    String
+  business      Business                @relation(fields: [businessId], references: [id])
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  suppliers     InventoryItemSupplier[]
+  purchaseItems PurchaseItem[]
+  saleItems     SaleItem[]
+  products      Product[]
+
+  @@index([businessId])
+}
+
+model InventoryItemSupplier {
+  id              String        @id @default(cuid())
+  inventoryItemId String
+  supplierId      String
+  createdAt       DateTime      @default(now())
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  supplier        Supplier      @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([inventoryItemId, supplierId])
+}
+
+model Purchase {
+  id           String           @id @default(cuid())
+  description  String
+  totalAmount  Float
+  category     PurchaseCategory
+  receiptUrl   String?
+  purchaseDate DateTime
+  notes        String?
+  businessId   String
+  business     Business         @relation(fields: [businessId], references: [id])
+  createdAt    DateTime         @default(now())
+  supplierId   String?
+  supplier     Supplier?        @relation(fields: [supplierId], references: [id])
+  items        PurchaseItem[]
+
+  @@index([businessId])
+}
+
+model PurchaseItem {
+  id              String         @id @default(cuid())
+  purchaseId      String
+  productId       String?
+  description     String
+  quantity        Int
+  unitCost        Float
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  product         Product?       @relation(fields: [productId], references: [id])
+  purchase        Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  SECRETARY
+  ACCOUNTANT
+}
+
+enum Category {
+  PLATOS
+  VASOS
+  TAZAS
+  SWEATERS
+  GORRAS
+  PLACAS
+  LAPIDAS
+  OTROS
+}
+
+enum Technique {
+  SUBLIMACION
+  PINTADO_A_MANO
+  VINIL
+  BORDADO
+  GRABADO
+  DTF
+  VDTF
+  OTRO
+}
+
+enum SaleStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PurchaseCategory {
+  SUBLIMABLE
+  NO_SUBLIMABLE
+  INSUMO
+  OTROS
+}
+
+enum BusinessLine {
+  PERSONALIZACION
+  ARREGLOS
+  IMPRESIONES
+  OTRO
+}
+
+enum InvestmentCategory {
+  MAQUINARIA
+  MEJORA_LOCAL
+  EQUIPO
+  OTRO
+}
+
+model Investment {
+  id            String                   @id @default(cuid())
+  description   String
+  amount        Float
+  category      InvestmentCategory
+  purchaseDate  DateTime
+  notes         String?
+  businessId    String
+  business      Business                 @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  contributions InvestmentContribution[]
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  @@index([businessId])
+}
+
+model Expense {
+  id         String   @id @default(cuid())
+  description String
+  amount     Float
+  category   String
+  isRecurring Boolean  @default(false)
+  expenseDate DateTime
+  notes      String?
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([businessId])
+}
