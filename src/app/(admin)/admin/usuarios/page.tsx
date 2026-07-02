@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import UserManagementForm from "@/components/admin/UserManagementForm";
+import ResetPasswordButton from "@/components/admin/ResetPasswordButton";
 
 const roleLabels: Record<string, { label: string; color: string }> = {
   SECRETARY: { label: "Secretario/a", color: "bg-blue-100 text-blue-700" },
@@ -70,9 +71,14 @@ export default async function UsuariosPage() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      {isActive && user.role !== "ADMIN" && (
-                        <UserDeactivateButton userId={user.id} />
-                      )}
+                      <div className="flex justify-end gap-2">
+                        {isActive && (
+                          <ResetPasswordButton userId={user.id} userName={user.name ?? user.email} />
+                        )}
+                        {isActive && user.role !== "ADMIN" && (
+                          <UserDeactivateButton userId={user.id} />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

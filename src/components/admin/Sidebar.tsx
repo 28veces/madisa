@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -17,11 +18,13 @@ import {
   DollarSign,
   Users,
   Store,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
 
 const navItems = [
+  { href: "/admin/perfil", label: "Mi Perfil", icon: UserCircle },
   { href: "/admin/usuarios", label: "Usuarios", icon: Users },
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/proveedores", label: "Proveedores", icon: Truck },
@@ -42,13 +45,29 @@ export default function Sidebar() {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 flex flex-col">
-      <div className="flex items-center gap-2 px-6 py-5 border-b border-gray-700">
-        <Palette className="h-6 w-6 text-rose-400" />
-        <div>
-          <p className="font-bold text-white text-sm">Arte Madisa</p>
-          <p className="text-xs text-gray-400">{session?.user?.name || "Cargando..."}</p>
+      <Link
+        href="/admin/perfil"
+        className="flex items-center gap-3 px-6 py-5 border-b border-gray-700 hover:bg-gray-800/60 transition-colors"
+      >
+        <div className="h-9 w-9 rounded-full overflow-hidden ring-2 ring-rose-500/50 bg-gradient-to-br from-rose-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+          {session?.user?.image ? (
+            <Image src={session.user.image} alt="" width={36} height={36} className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-xs font-semibold text-white">
+              {(session?.user?.name || "?")
+                .split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((p) => p[0]?.toUpperCase())
+                .join("")}
+            </span>
+          )}
         </div>
-      </div>
+        <div className="min-w-0">
+          <p className="font-bold text-white text-sm truncate">{session?.user?.name || "Cargando..."}</p>
+          <p className="text-xs text-gray-400">Arte Madisa</p>
+        </div>
+      </Link>
 
       <nav className="flex-1 px-4 py-4 space-y-1">
         {navItems.map(({ href, label, icon: Icon }) => {

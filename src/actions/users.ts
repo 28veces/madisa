@@ -11,7 +11,7 @@ const businessUserSchema = z.object({
   email: z.string().email("Email inválido"),
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
   name: z.string().min(1, "Nombre requerido"),
-  role: z.enum(["SECRETARY", "ACCOUNTANT"]),
+  role: z.enum(["ADMIN", "SECRETARY", "ACCOUNTANT"]),
 });
 
 export async function getBusinessUsers() {
@@ -19,7 +19,7 @@ export async function getBusinessUsers() {
   return prisma.user.findMany({
     where: {
       businessId,
-      role: { in: ["SECRETARY", "ACCOUNTANT"] },
+      role: { in: ["ADMIN", "SECRETARY", "ACCOUNTANT"] },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -51,6 +51,29 @@ export async function createBusinessUser(data: z.infer<typeof businessUserSchema
       role: parsed.data.role,
       businessId,
     },
+  });
+
+  revalidatePath("/admin/usuarios");
+  return { success: true };
+}
+
+export async function resetUserPassword(id: string, newPassword: string) {
+  const { businessId } = await requireBusiness([UserRole.ADMIN]);
+
+  const parsed = z.string().min(6, "La contraseña debe tener al menos 6 caracteres").safeParse(newPassword);
+  if (!parsed.success) {
+    return { error: parsed.error.flatten().formErrors[0] };
+  }
+
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user || user.businessId !== businessId) {
+    return { error: "Sin permiso" };
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data, 10);
+  await prisma.user.update({
+    where: { id },
+    data: { passwordHash },
   });
 
   revalidatePath("/admin/usuarios");

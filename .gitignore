@@ -49,3 +49,6 @@ next-env.d.ts
 # logs
 *.log
 *:Zone.Identifier
+
+# user-uploaded content
+/public/uploads

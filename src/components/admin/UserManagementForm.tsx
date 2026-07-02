@@ -23,7 +23,7 @@ export default function UserManagementForm() {
     name: "",
     email: "",
     password: "",
-    role: "SECRETARY" as "SECRETARY" | "ACCOUNTANT",
+    role: "SECRETARY" as "ADMIN" | "SECRETARY" | "ACCOUNTANT",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,6 +110,7 @@ export default function UserManagementForm() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="ADMIN">Administrador</SelectItem>
                     <SelectItem value="SECRETARY">Secretario/a</SelectItem>
                     <SelectItem value="ACCOUNTANT">Contador/a</SelectItem>
                   </SelectContent>
