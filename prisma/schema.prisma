@@ -139,6 +139,7 @@ model InventoryItem {
   description   String
   category      PurchaseCategory
   note          String?
+  imageUrl      String?
   isActive      Boolean                 @default(true)
   businessId    String
   business      Business                @relation(fields: [businessId], references: [id])

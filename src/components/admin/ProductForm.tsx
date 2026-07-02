@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createProduct, updateProduct } from "@/actions/products";
+import { ImageIcon, Upload } from "lucide-react";
 
 interface InventoryOption {
   id: string;
@@ -84,6 +86,17 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
     },
   });
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(product?.imageUrl || null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPreview(URL.createObjectURL(file));
+  };
+
   const validate = (values: FormValues) => {
     const errs: Partial<Record<keyof FormValues, { message: string }>> = {};
     if (!values.name.trim()) errs.name = { message: "Nombre requerido" };
@@ -103,6 +116,7 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
 
     const fd = new FormData();
     Object.entries(values).forEach(([k, v]) => fd.append(k, String(v)));
+    if (photoFile) fd.append("photo", photoFile);
 
     const result = product?.id
       ? await updateProduct(product.id, fd)
@@ -119,6 +133,31 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 max-w-xl">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="sm:col-span-2">
+          <Label>Foto del producto</Label>
+          <div className="flex items-center gap-4 mt-1">
+            <div className="h-24 w-24 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0">
+              {preview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={preview} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <ImageIcon className="h-8 w-8 text-gray-300" />
+              )}
+            </div>
+            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              {preview ? "Cambiar foto" : "Subir foto"}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handlePhotoChange}
+            />
+          </div>
+        </div>
+
         <div className="sm:col-span-2">
           <Label htmlFor="name">Nombre *</Label>
           <Input id="name" {...register("name")} className="mt-1" />
@@ -185,8 +224,11 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
         </div>
 
         <div className="sm:col-span-2">
-          <Label htmlFor="imageUrl">URL de imagen</Label>
+          <Label htmlFor="imageUrl">URL de imagen (alternativa)</Label>
           <Input id="imageUrl" placeholder="https://..." {...register("imageUrl")} className="mt-1" />
+          <p className="text-xs text-gray-500 mt-1">
+            Si subes una foto arriba, esa foto tiene prioridad. Si no hay foto ni URL aquí y el producto está vinculado a un artículo de inventario con foto, se usará esa en su lugar.
+          </p>
         </div>
 
         {inventoryItems.length > 0 && (

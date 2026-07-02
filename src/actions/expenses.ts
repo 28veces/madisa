@@ -10,7 +10,7 @@ const expenseSchema = z.object({
   amount: z.number().positive("El monto debe ser mayor a 0"),
   category: z.string().min(1, "La categoría es requerida"),
   isRecurring: z.boolean().default(false),
-  expenseDate: z.string().datetime(),
+  expenseDate: z.string().min(1, "La fecha es requerida"),
   notes: z.string().optional(),
 });
 

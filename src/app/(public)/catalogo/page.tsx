@@ -55,7 +55,7 @@ async function ProductGrid({ category }: { category?: string }) {
             technique={p.technique}
             material={p.material}
             basePrice={Number(p.basePrice)}
-            imageUrl={p.imageUrl}
+            imageUrl={p.imageUrl ?? p.inventoryItem?.imageUrl}
             availableStock={stock}
           />
         );

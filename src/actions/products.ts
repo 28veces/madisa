@@ -5,6 +5,8 @@ import { requireBusiness } from "@/lib/require-auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { Category, Technique, UserRole } from "@prisma/client";
+import { saveUploadedImage } from "@/lib/upload";
+import { randomUUID } from "crypto";
 
 const productSchema = z.object({
   name: z.string().min(1, "Nombre requerido"),
@@ -34,6 +36,13 @@ export async function createProduct(formData: FormData) {
 
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  const photo = formData.get("photo") as File | null;
+  if (photo && photo.size > 0) {
+    const uploaded = await saveUploadedImage(photo, "products", randomUUID());
+    if ("error" in uploaded) return { error: { photo: [uploaded.error] } };
+    parsed.data.imageUrl = uploaded.url;
   }
 
   const { inventoryItemId, ...rest } = parsed.data;
@@ -68,6 +77,13 @@ export async function updateProduct(id: string, formData: FormData) {
 
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
+  }
+
+  const photo = formData.get("photo") as File | null;
+  if (photo && photo.size > 0) {
+    const uploaded = await saveUploadedImage(photo, "products", id);
+    if ("error" in uploaded) return { error: { photo: [uploaded.error] } };
+    parsed.data.imageUrl = uploaded.url;
   }
 
   const { inventoryItemId, ...rest } = parsed.data;

@@ -47,7 +47,7 @@ async function ProductGrid() {
           technique={p.technique}
           material={p.material}
           basePrice={Number(p.basePrice)}
-          imageUrl={p.imageUrl}
+          imageUrl={p.imageUrl ?? p.inventoryItem?.imageUrl}
         />
       ))}
     </div>

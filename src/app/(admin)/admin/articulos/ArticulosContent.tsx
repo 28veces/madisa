@@ -19,6 +19,7 @@ interface Item {
   description: string;
   category: string;
   note: string | null;
+  imageUrl?: string | null;
   isActive: boolean;
   suppliers: Supplier[];
 }
@@ -89,6 +90,7 @@ export default function ArticulosContent({ items }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50">
+                <th className="text-left py-3 px-4 font-medium text-gray-600">Foto</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Código</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Descripción</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Categoría</th>
@@ -100,7 +102,7 @@ export default function ArticulosContent({ items }: Props) {
             <tbody className="divide-y divide-gray-50">
               {paginated.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-gray-400">
+                  <td colSpan={7} className="text-center py-10 text-gray-400">
                     No hay artículos.{" "}
                     <Link href="/admin/articulos/nuevo" className="text-rose-600 hover:underline">
                       Agregar primero.
@@ -110,6 +112,16 @@ export default function ArticulosContent({ items }: Props) {
               )}
               {paginated.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="py-3 px-4">
+                    <div className="h-10 w-10 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
+                      {item.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-gray-300 text-xs">—</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="py-3 px-4">
                     <span className="font-mono font-medium text-gray-900">{item.code}</span>
                   </td>

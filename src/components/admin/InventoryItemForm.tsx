@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createInventoryItem, updateInventoryItem } from "@/actions/inventory-items";
+import { ImageIcon, Upload } from "lucide-react";
 
 interface FormValues {
   description: string;
@@ -29,6 +31,7 @@ interface Props {
     description?: string;
     category?: string;
     note?: string;
+    imageUrl?: string | null;
     suppliers?: Array<{ supplier: Supplier }>;
   };
   suppliers: Supplier[];
@@ -51,6 +54,16 @@ export default function InventoryItemForm({ item, suppliers }: Props) {
   });
 
   const selectedSuppliers = new Set(item?.suppliers?.map((s) => s.supplier.id) ?? []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(item?.imageUrl ?? null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPreview(URL.createObjectURL(file));
+  };
 
   const validate = (values: FormValues) => {
     const errs: Partial<Record<keyof FormValues, { message: string }>> = {};
@@ -70,6 +83,7 @@ export default function InventoryItemForm({ item, suppliers }: Props) {
     fd.append("description", values.description);
     fd.append("category", values.category);
     fd.append("note", values.note);
+    if (photoFile) fd.append("photo", photoFile);
 
     const checkedSuppliers = Array.from(
       document.querySelectorAll('input[name="supplier"]:checked')
@@ -100,6 +114,34 @@ export default function InventoryItemForm({ item, suppliers }: Props) {
             <Input value={item.code} disabled className="mt-1 bg-gray-100" />
           </div>
         )}
+
+        <div>
+          <Label>Foto del artículo</Label>
+          <p className="text-xs text-gray-500 mb-2">
+            Se usará como imagen del producto en el catálogo público, salvo que el producto tenga su propia foto.
+          </p>
+          <div className="flex items-center gap-4">
+            <div className="h-24 w-24 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0">
+              {preview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={preview} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <ImageIcon className="h-8 w-8 text-gray-300" />
+              )}
+            </div>
+            <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              {preview ? "Cambiar foto" : "Subir foto"}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handlePhotoChange}
+            />
+          </div>
+        </div>
 
         <div>
           <Label htmlFor="description">Descripción *</Label>

@@ -5,6 +5,7 @@ import { requireBusiness } from "@/lib/require-auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PurchaseCategory, UserRole } from "@prisma/client";
+import { saveUploadedImage } from "@/lib/upload";
 
 const inventoryItemSchema = z.object({
   description: z.string().min(1, "Descripción requerida"),
@@ -43,12 +44,21 @@ export async function createInventoryItem(formData: FormData) {
 
   const code = await generateCode();
 
+  let imageUrl: string | undefined;
+  const photo = formData.get("photo") as File | null;
+  if (photo && photo.size > 0) {
+    const uploaded = await saveUploadedImage(photo, "inventory", code);
+    if ("error" in uploaded) return { error: { photo: [uploaded.error] } };
+    imageUrl = uploaded.url;
+  }
+
   const item = await prisma.inventoryItem.create({
     data: {
       code,
       description: parsed.data.description,
       category: parsed.data.category,
       note: parsed.data.note,
+      imageUrl,
       isActive: true,
       businessId,
     },
@@ -88,12 +98,21 @@ export async function updateInventoryItem(id: string, formData: FormData) {
     return { error: parsed.error.flatten().fieldErrors };
   }
 
+  let imageUrl: string | undefined;
+  const photo = formData.get("photo") as File | null;
+  if (photo && photo.size > 0) {
+    const uploaded = await saveUploadedImage(photo, "inventory", item.code);
+    if ("error" in uploaded) return { error: { photo: [uploaded.error] } };
+    imageUrl = uploaded.url;
+  }
+
   await prisma.inventoryItem.update({
     where: { id },
     data: {
       description: parsed.data.description,
       category: parsed.data.category,
       note: parsed.data.note,
+      ...(imageUrl ? { imageUrl } : {}),
     },
   });
 
