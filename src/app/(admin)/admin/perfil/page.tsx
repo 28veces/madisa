@@ -21,6 +21,14 @@ export default async function PerfilPage() {
   if (!user) return null;
 
   const roleInfo = roleLabels[user.role];
+  // Formateado aquí (Server Component, corre una sola vez) y no en ProfileHeader
+  // ("use client", corre en servidor y navegador) para evitar un mismatch de
+  // hidratación si el runtime de Vercel y el navegador del usuario tienen zonas
+  // horarias distintas (ver error React #418).
+  const memberSinceLabel = new Intl.DateTimeFormat("es-PA", {
+    dateStyle: "long",
+    timeZone: "America/Panama",
+  }).format(user.createdAt);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -30,7 +38,7 @@ export default async function PerfilPage() {
         imageUrl={user.imageUrl}
         roleLabel={roleInfo?.label ?? user.role}
         roleColor={roleInfo?.color ?? "bg-gray-100 text-gray-700"}
-        memberSince={user.createdAt}
+        memberSinceLabel={memberSinceLabel}
       />
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex items-center justify-between">

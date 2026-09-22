@@ -25,14 +25,14 @@ export default function ProfileHeader({
   imageUrl,
   roleLabel,
   roleColor,
-  memberSince,
+  memberSinceLabel,
 }: {
   name: string;
   email: string;
   imageUrl: string | null;
   roleLabel: string;
   roleColor: string;
-  memberSince: Date;
+  memberSinceLabel: string;
 }) {
   const { update } = useSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -131,9 +131,7 @@ export default function ProfileHeader({
 
         <Badge className={roleColor}>{roleLabel}</Badge>
 
-        <p className="text-xs text-gray-400">
-          Miembro desde {new Intl.DateTimeFormat("es", { dateStyle: "long" }).format(memberSince)}
-        </p>
+        <p className="text-xs text-gray-400">Miembro desde {memberSinceLabel}</p>
       </div>
     </div>
   );
