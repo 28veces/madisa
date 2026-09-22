@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireBusiness } from "@/lib/require-auth";
+import { requireBusiness, getActiveBusinessId } from "@/lib/require-auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { Category, Technique, UserRole } from "@prisma/client";
@@ -135,8 +135,12 @@ export async function getProducts(category?: Category, activeOnly = false) {
 }
 
 export async function getPublicProducts(category?: Category) {
+  const businessId = await getActiveBusinessId();
+  if (!businessId) return [];
+
   const products = await prisma.product.findMany({
     where: {
+      businessId,
       isActive: true,
       ...(category ? { category } : {}),
     },
@@ -174,8 +178,11 @@ export async function getProduct(id: string) {
 }
 
 export async function getPublicProduct(id: string) {
+  const businessId = await getActiveBusinessId();
+  if (!businessId) return null;
+
   return prisma.product.findUnique({
-    where: { id, isActive: true },
+    where: { id, isActive: true, businessId },
     include: {
       inventoryItem: {
         include: {

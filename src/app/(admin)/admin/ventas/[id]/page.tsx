@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { prisma } from "@/lib/prisma";
+import { getSale } from "@/actions/sales";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
@@ -29,16 +29,7 @@ interface Props {
 export default async function SaleDetailPage({ params }: Props) {
   const { id } = await params;
 
-  const sale = await prisma.sale.findUnique({
-    where: { id },
-    include: {
-      items: {
-        include: {
-          inventoryItem: true,
-        },
-      },
-    },
-  }).catch(() => null);
+  const sale = await getSale(id).catch(() => null);
 
   if (!sale) {
     return (

@@ -31,7 +31,7 @@ export async function createPublicOrder(data: PublicOrderData) {
       const resolvedItems = await Promise.all(
         data.items.map(async (item) => {
           const product = await tx.product.findUnique({
-            where: { id: item.productId },
+            where: { id: item.productId, businessId: business.id },
           });
 
           if (!product) throw new Error(`Producto ${item.productId} no encontrado`);

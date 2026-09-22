@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
+import { requireBusiness } from "@/lib/require-auth";
 import MetricCard from "@/components/admin/MetricCard";
 import SalesChart from "@/components/admin/SalesChart";
 import BusinessLineChart from "@/components/admin/BusinessLineChart";
@@ -10,7 +11,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-async function getMonthlyData(year: number) {
+async function getMonthlyData(businessId: string, year: number) {
   const months = [];
   const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
@@ -20,15 +21,15 @@ async function getMonthlyData(year: number) {
 
     const [salesAgg, expensesAgg, purchasesAgg] = await Promise.all([
       prisma.sale.aggregate({
-        where: { createdAt: { gte: start, lte: end }, status: { not: "CANCELLED" } },
+        where: { businessId, createdAt: { gte: start, lte: end }, status: { not: "CANCELLED" } },
         _sum: { totalAmount: true },
       }),
       prisma.expense.aggregate({
-        where: { expenseDate: { gte: start, lte: end } },
+        where: { businessId, expenseDate: { gte: start, lte: end } },
         _sum: { amount: true },
       }),
       prisma.purchase.aggregate({
-        where: { purchaseDate: { gte: start, lte: end } },
+        where: { businessId, purchaseDate: { gte: start, lte: end } },
         _sum: { totalAmount: true },
       }),
     ]);
@@ -43,9 +44,9 @@ async function getMonthlyData(year: number) {
   return months;
 }
 
-async function getBusinessLineDistribution() {
+async function getBusinessLineDistribution(businessId: string) {
   const sales = await prisma.sale.findMany({
-    where: { status: { not: "CANCELLED" } },
+    where: { businessId, status: { not: "CANCELLED" } },
     select: { businessLine: true, totalAmount: true },
   });
 
@@ -66,26 +67,26 @@ async function getBusinessLineDistribution() {
     .map(([name, value]) => ({ name, value }));
 }
 
-async function getYearlySummaryData(year: number) {
+async function getYearlySummaryData(businessId: string, year: number) {
   const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
   const yearStart = new Date(Date.UTC(year, 0, 1));
   const yearEnd = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
 
   const [sales, expenses, purchases, investments] = await Promise.all([
     prisma.sale.findMany({
-      where: { createdAt: { gte: yearStart, lte: yearEnd }, status: { not: "CANCELLED" } },
+      where: { businessId, createdAt: { gte: yearStart, lte: yearEnd }, status: { not: "CANCELLED" } },
       select: { createdAt: true, totalAmount: true },
     }),
     prisma.expense.findMany({
-      where: { expenseDate: { gte: yearStart, lte: yearEnd } },
+      where: { businessId, expenseDate: { gte: yearStart, lte: yearEnd } },
       select: { expenseDate: true, amount: true },
     }),
     prisma.purchase.findMany({
-      where: { purchaseDate: { gte: yearStart, lte: yearEnd } },
+      where: { businessId, purchaseDate: { gte: yearStart, lte: yearEnd } },
       select: { purchaseDate: true, totalAmount: true },
     }),
     prisma.investment.findMany({
-      where: { purchaseDate: { gte: yearStart, lte: yearEnd } },
+      where: { businessId, purchaseDate: { gte: yearStart, lte: yearEnd } },
       select: { purchaseDate: true, amount: true },
     }),
   ]);
@@ -116,7 +117,7 @@ async function getYearlySummaryData(year: number) {
   });
 }
 
-async function getDashboardData() {
+async function getDashboardData(businessId: string) {
   const now = new Date();
   const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   const year = now.getUTCFullYear();
@@ -124,36 +125,37 @@ async function getDashboardData() {
   const [salesThisMonth, totalSales, purchasesThisMonth, expensesThisMonth, lowStockProducts, recentSales, monthlyData, businessLineData, yearlySummaryData] =
     await Promise.all([
       prisma.sale.aggregate({
-        where: { createdAt: { gte: startOfMonth }, status: { not: "CANCELLED" } },
+        where: { businessId, createdAt: { gte: startOfMonth }, status: { not: "CANCELLED" } },
         _sum: { totalAmount: true },
         _count: true,
       }),
       prisma.sale.aggregate({
-        where: { status: { not: "CANCELLED" } },
+        where: { businessId, status: { not: "CANCELLED" } },
         _sum: { totalAmount: true },
         _count: true,
       }),
       prisma.purchase.aggregate({
-        where: { purchaseDate: { gte: startOfMonth } },
+        where: { businessId, purchaseDate: { gte: startOfMonth } },
         _sum: { totalAmount: true },
         _count: true,
       }),
       prisma.expense.aggregate({
-        where: { expenseDate: { gte: startOfMonth } },
+        where: { businessId, expenseDate: { gte: startOfMonth } },
         _sum: { amount: true },
         _count: true,
       }),
       prisma.product.findMany({
-        where: { isActive: true },
+        where: { businessId, isActive: true },
         take: 5,
       }),
       prisma.sale.findMany({
+        where: { businessId },
         orderBy: { createdAt: "desc" },
         take: 5,
       }),
-      getMonthlyData(year),
-      getBusinessLineDistribution(),
-      getYearlySummaryData(year).catch(() => []),
+      getMonthlyData(businessId, year),
+      getBusinessLineDistribution(businessId),
+      getYearlySummaryData(businessId, year).catch(() => []),
     ]);
 
   return { salesThisMonth, totalSales, purchasesThisMonth, expensesThisMonth, lowStockProducts, recentSales, monthlyData, businessLineData, yearlySummaryData };
@@ -179,7 +181,8 @@ const emptyData = {
 };
 
 export default async function DashboardPage() {
-  const data = await getDashboardData().catch(() => emptyData);
+  const { businessId } = await requireBusiness();
+  const data = await getDashboardData(businessId).catch(() => emptyData);
   const salesAmount = Number(data.salesThisMonth._sum.totalAmount ?? 0);
   const purchasesAmount = Number(data.purchasesThisMonth._sum.totalAmount ?? 0);
   const expensesAmount = Number(data.expensesThisMonth._sum.amount ?? 0);

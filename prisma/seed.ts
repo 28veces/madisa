@@ -50,9 +50,12 @@ async function main() {
   });
   console.log("✅ Usuario ADMIN creado:", adminUser.email);
 
-  // Sample products
+  // Sample products. El stock ya no vive en Product: se calcula a partir de
+  // InventoryItem (compras - ventas), así que cada producto crea su propio
+  // InventoryItem y una Purchase inicial que le da el stock de arranque.
   const products = [
     {
+      code: "TAZ-001",
       name: "Taza personalizada 11oz",
       description: "Taza de cerámica blanca ideal para sublimación con tu diseño favorito",
       category: "TAZAS" as const,
@@ -62,6 +65,7 @@ async function main() {
       stock: 50,
     },
     {
+      code: "PLA-001",
       name: "Plato decorativo redondo",
       description: "Plato de cerámica de 8 pulgadas, ideal para decoración o regalo",
       category: "PLATOS" as const,
@@ -71,6 +75,7 @@ async function main() {
       stock: 20,
     },
     {
+      code: "VAS-001",
       name: "Vaso arenado con nombre",
       description: "Vaso de vidrio de 16oz con técnica de arenado para nombres y frases",
       category: "VASOS" as const,
@@ -80,6 +85,7 @@ async function main() {
       stock: 30,
     },
     {
+      code: "SWE-001",
       name: "Sweater con diseño bordado",
       description: "Sweater de algodón con diseño bordado personalizado",
       category: "SWEATERS" as const,
@@ -89,6 +95,7 @@ async function main() {
       stock: 10,
     },
     {
+      code: "PLC-001",
       name: "Placa conmemorativa",
       description: "Placa de aluminio o madera para reconocimientos y condecoraciones",
       category: "PLACAS" as const,
@@ -98,6 +105,7 @@ async function main() {
       stock: 15,
     },
     {
+      code: "TAZ-002",
       name: "Taza mágica que cambia de color",
       description: "Taza sensible al calor: aparece tu diseño al agregar bebida caliente",
       category: "TAZAS" as const,
@@ -107,6 +115,7 @@ async function main() {
       stock: 25,
     },
     {
+      code: "SWE-002",
       name: "Sweater con vinil personalizado",
       description: "Diseño en vinil termoadhesivo de alta calidad sobre sweater",
       category: "SWEATERS" as const,
@@ -116,6 +125,7 @@ async function main() {
       stock: 12,
     },
     {
+      code: "PLA-002",
       name: "Plato pintado a mano",
       description: "Plato cerámico decorativo pintado completamente a mano, pieza única",
       category: "PLATOS" as const,
@@ -127,15 +137,63 @@ async function main() {
   ];
 
   for (const product of products) {
+    const inventoryItem = await prisma.inventoryItem.upsert({
+      where: { code: product.code },
+      update: {},
+      create: {
+        code: product.code,
+        description: product.name,
+        category: "SUBLIMABLE",
+        businessId: business.id,
+      },
+    });
+
     await prisma.product.upsert({
       where: { id: product.name },
       update: {},
-      create: { ...product, id: product.name, businessId: business.id },
+      create: {
+        id: product.name,
+        name: product.name,
+        description: product.description,
+        category: product.category,
+        material: product.material,
+        technique: product.technique,
+        basePrice: product.basePrice,
+        businessId: business.id,
+        inventoryItemId: inventoryItem.id,
+      },
     });
+
+    // Da stock inicial vía una compra, si aún no existe.
+    const existingPurchase = await prisma.purchaseItem.findFirst({
+      where: { inventoryItemId: inventoryItem.id },
+    });
+    if (!existingPurchase) {
+      await prisma.purchase.create({
+        data: {
+          description: `Stock inicial — ${product.name}`,
+          totalAmount: product.stock * (product.basePrice * 0.5),
+          category: "SUBLIMABLE",
+          purchaseDate: new Date(),
+          businessId: business.id,
+          items: {
+            create: {
+              description: product.name,
+              quantity: product.stock,
+              unitCost: product.basePrice * 0.5,
+              inventoryItemId: inventoryItem.id,
+            },
+          },
+        },
+      });
+    }
   }
-  console.log(`✅ ${products.length} productos de muestra creados`);
+  console.log(`✅ ${products.length} productos de muestra creados (con stock inicial vía compra)`);
 }
 
 main()
-  .catch(console.error)
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  })
   .finally(() => prisma.$disconnect());
