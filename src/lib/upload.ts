@@ -25,6 +25,15 @@ export async function saveUploadedImage(file: File, subfolder: string, keyPrefix
     return { url: blob.url } as const;
   }
 
+  // En Vercel el filesystem del bundle es de solo lectura (fuera de /tmp): si llegamos
+  // aquí sin BLOB_READ_WRITE_TOKEN es que el Blob store no está conectado al proyecto/
+  // environment, no que estemos en dev. Avisar claro en vez de tirar un ENOENT críptico.
+  if (process.env.VERCEL) {
+    return {
+      error: "Almacenamiento de imágenes no configurado en el servidor (falta conectar Vercel Blob). Contacta al administrador.",
+    } as const;
+  }
+
   // Desarrollo local: disco.
   const uploadsDir = path.join(process.cwd(), "public", "uploads", subfolder);
   await mkdir(uploadsDir, { recursive: true });
