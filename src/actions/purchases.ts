@@ -24,6 +24,30 @@ const purchaseSchema = z.object({
   items: z.array(purchaseItemSchema).min(1, "Al menos un item requerido"),
 });
 
+// Verifica que los artículos pertenezcan al negocio y usa su descripción real,
+// para que la compra siempre refleje el artículo cuyo stock va a aumentar.
+async function resolveItems(
+  businessId: string,
+  items: z.infer<typeof purchaseItemSchema>[]
+) {
+  const ids = [...new Set(items.map((i) => i.inventoryItemId))];
+  const found = await prisma.inventoryItem.findMany({
+    where: { id: { in: ids }, businessId },
+    select: { id: true, description: true },
+  });
+  if (found.length !== ids.length) return null;
+  const byId = new Map(found.map((f) => [f.id, f.description]));
+  return items.map((i) => ({ ...i, description: byId.get(i.inventoryItemId)! }));
+}
+
+function revalidateStock() {
+  revalidatePath("/admin/compras");
+  revalidatePath("/admin/inventario");
+  revalidatePath("/admin/catalogo");
+  revalidatePath("/catalogo");
+  revalidatePath("/admin");
+}
+
 export async function createPurchase(data: z.infer<typeof purchaseSchema>) {
   const { businessId } = await requireBusiness([UserRole.ADMIN, UserRole.SECRETARY]);
   const parsed = purchaseSchema.safeParse(data);
@@ -31,10 +55,10 @@ export async function createPurchase(data: z.infer<typeof purchaseSchema>) {
     return { error: parsed.error.flatten().fieldErrors };
   }
 
-  const totalAmount = parsed.data.items.reduce(
-    (sum, item) => sum + item.quantity * item.unitCost,
-    0
-  );
+  const items = await resolveItems(businessId, parsed.data.items);
+  if (!items) return { error: { items: ["Artículo de inventario inválido"] } };
+
+  const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
 
   await prisma.purchase.create({
     data: {
@@ -46,12 +70,11 @@ export async function createPurchase(data: z.infer<typeof purchaseSchema>) {
       notes: parsed.data.notes,
       totalAmount,
       businessId,
-      items: { create: parsed.data.items },
+      items: { create: items },
     },
   });
 
-  revalidatePath("/admin/compras");
-  revalidatePath("/admin");
+  revalidateStock();
   return { success: true };
 }
 
@@ -61,8 +84,7 @@ export async function deletePurchase(id: string) {
   if (!purchase || purchase.businessId !== businessId) throw new Error("Sin permiso");
 
   await prisma.purchase.delete({ where: { id } });
-  revalidatePath("/admin/compras");
-  revalidatePath("/admin");
+  revalidateStock();
   return { success: true };
 }
 
@@ -93,10 +115,10 @@ export async function updatePurchase(id: string, data: z.infer<typeof purchaseSc
   const parsed = purchaseSchema.safeParse(data);
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors };
 
-  const totalAmount = parsed.data.items.reduce(
-    (sum, item) => sum + item.quantity * item.unitCost,
-    0
-  );
+  const items = await resolveItems(businessId, parsed.data.items);
+  if (!items) return { error: { items: ["Artículo de inventario inválido"] } };
+
+  const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
 
   await prisma.$transaction([
     prisma.purchaseItem.deleteMany({ where: { purchaseId: id } }),
@@ -110,12 +132,11 @@ export async function updatePurchase(id: string, data: z.infer<typeof purchaseSc
         purchaseDate: parsed.data.purchaseDate,
         notes: parsed.data.notes,
         totalAmount,
-        items: { create: parsed.data.items },
+        items: { create: items },
       },
     }),
   ]);
 
-  revalidatePath("/admin/compras");
-  revalidatePath("/admin");
+  revalidateStock();
   return { success: true };
 }

@@ -103,14 +103,15 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
 
     const itemsWithIds = items.map((item) => {
       if (item.inventoryItemId) return item;
-      const found = inventoryItems.find(
-        (it) => it.description.toLowerCase() === item.description.toLowerCase()
+      // Solo se vincula por texto si coincide exactamente con un único artículo
+      const matches = inventoryItems.filter(
+        (it) => it.description.trim().toLowerCase() === item.description.trim().toLowerCase()
       );
-      return found ? { ...item, inventoryItemId: found.id } : item;
+      return matches.length === 1 ? { ...item, inventoryItemId: matches[0].id } : item;
     });
 
     if (itemsWithIds.some((i) => !i.inventoryItemId)) {
-      return toast.error("Selecciona un artículo del inventario para cada item");
+      return toast.error("Selecciona de la lista el artículo del inventario de cada item");
     }
 
     const firstInvItem = inventoryItems.find((it) => it.id === itemsWithIds[0].inventoryItemId);
@@ -176,9 +177,7 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
           {items.map((item, i) => {
             const selectedInvItem = item.inventoryItemId
               ? inventoryItems.find((it) => it.id === item.inventoryItemId)
-              : inventoryItems.find(
-                  (it) => it.description.toLowerCase() === item.description.toLowerCase()
-                );
+              : undefined;
 
             const categoryLabel =
               selectedInvItem?.category === "SUBLIMABLE"
@@ -199,7 +198,15 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
                       type="text"
                       value={item.description}
                       onChange={(e) => {
-                        updateItem(i, "description", e.target.value);
+                        // Al editar el texto se pierde el vínculo con el artículo elegido;
+                        // si no, la compra suma stock a un artículo distinto al que se ve escrito.
+                        setItems(
+                          items.map((it, idx) =>
+                            idx === i
+                              ? { ...it, description: e.target.value, inventoryItemId: "" }
+                              : it
+                          )
+                        );
                         setItemSearchOpen({ ...itemSearchOpen, [i]: true });
                       }}
                       placeholder="Buscar artículo..."

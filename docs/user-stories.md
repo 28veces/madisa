@@ -70,6 +70,9 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 
 - **US-25** ✅ Como `ADMIN`/`SECRETARY`, quiero registrar compras con proveedor, categoría (sublimable/no sublimable/insumo/otros) y comprobante.
   `src/actions/purchases.ts`
+  - Criterio: al registrar o editar una compra, el stock del artículo (US-18) aumenta de inmediato en Inventario, catálogo admin y catálogo público.
+  - Criterio: cada línea debe quedar vinculada al artículo que se ve en pantalla; si el usuario edita el texto después de elegir un artículo, el vínculo se pierde y debe volver a elegirlo de la lista. El servidor valida que el artículo pertenezca al negocio y guarda la descripción real del artículo.
+  - Bug corregido (2026-09-22): el formulario conservaba el artículo elegido al reescribir el texto, así que la compra sumaba stock a otro artículo y en Inventario "no cambiaba el stock".
 - **US-26** ✅ Como `ADMIN`/`SECRETARY`, quiero editar una compra existente.
 - **US-27** ✅ Como `ADMIN`, quiero eliminar una compra.
 - **US-28** ✅ Como `ADMIN`/`SECRETARY`, quiero gestionar proveedores (crear, editar, listar, activar/desactivar).
