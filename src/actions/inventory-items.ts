@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PurchaseCategory, UserRole } from "@prisma/client";
 import { saveUploadedImage } from "@/lib/upload";
-import { stockInclude, stockTotals, availableStock } from "@/lib/stock";
+import { stockInclude, stockTotals, availableStock, getAverageUnitCosts } from "@/lib/stock";
 
 const inventoryItemSchema = z.object({
   description: z.string().min(1, "Descripción requerida"),
@@ -182,6 +182,7 @@ export async function getInventoryItemsForSale() {
     include: stockInclude,
     orderBy: { code: "asc" },
   });
+  const avgCosts = await getAverageUnitCosts(prisma, items.map((i) => i.id));
 
   return items.map((item) => ({
     id: item.id,
@@ -189,6 +190,7 @@ export async function getInventoryItemsForSale() {
     description: item.description,
     category: item.category as string,
     availableStock: availableStock(item),
+    avgUnitCost: avgCosts.get(item.id) ?? 0,
   }));
 }
 

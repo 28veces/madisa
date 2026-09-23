@@ -42,3 +42,30 @@ export async function getAvailableStock(
     (purchased._sum.quantity ?? 0) - (sold._sum.quantity ?? 0) - (adjusted._sum.quantity ?? 0)
   );
 }
+
+// Costo promedio ponderado por unidad de cada artículo según sus compras:
+// Σ(cantidad × costo unitario) / Σ cantidad. Artículos sin compras no aparecen (costo 0).
+export async function getAverageUnitCosts(
+  tx: Prisma.TransactionClient,
+  inventoryItemIds: string[]
+): Promise<Map<string, number>> {
+  if (inventoryItemIds.length === 0) return new Map();
+  const rows = await tx.purchaseItem.findMany({
+    where: { inventoryItemId: { in: [...new Set(inventoryItemIds)] } },
+    select: { inventoryItemId: true, quantity: true, unitCost: true },
+  });
+  const acc = new Map<string, { qty: number; cost: number }>();
+  for (const r of rows) {
+    if (!r.inventoryItemId) continue;
+    const a = acc.get(r.inventoryItemId) ?? { qty: 0, cost: 0 };
+    a.qty += r.quantity;
+    a.cost += r.quantity * r.unitCost;
+    acc.set(r.inventoryItemId, a);
+  }
+  return new Map([...acc].map(([id, a]) => [id, a.qty > 0 ? a.cost / a.qty : 0]));
+}
+
+// Costo de producción de una línea de venta: cantidad × costo promedio, redondeado a centavos.
+export function lineCost(avgUnitCost: number, quantity: number) {
+  return Math.round(avgUnitCost * quantity * 100) / 100;
+}

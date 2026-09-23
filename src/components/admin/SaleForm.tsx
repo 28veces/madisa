@@ -23,6 +23,7 @@ interface ItemForSale {
   description: string;
   category: string;
   availableStock: number;
+  avgUnitCost: number;
 }
 
 interface SaleLineItem {
@@ -31,6 +32,8 @@ interface SaleLineItem {
   quantity: number;
   unitPrice: number;
   productionCost: number;
+  // true cuando el usuario escribió el costo a mano; entonces ya no se recalcula solo
+  costEdited: boolean;
   customization: string;
 }
 
@@ -48,7 +51,7 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
   const [status, setStatus] = useState("PENDING");
   const [businessLine, setBusinessLine] = useState("PERSONALIZACION");
   const [lines, setLines] = useState<SaleLineItem[]>([
-    { inventoryItemId: "", description: "", quantity: 1, unitPrice: 0, productionCost: 0, customization: "" },
+    { inventoryItemId: "", description: "", quantity: 1, unitPrice: 0, productionCost: 0, costEdited: false, customization: "" },
   ]);
   const [searchOpen, setSearchOpen] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(false);
@@ -64,7 +67,7 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
   };
 
   const addLine = () =>
-    setLines([...lines, { inventoryItemId: "", description: "", quantity: 1, unitPrice: 0, productionCost: 0, customization: "" }]);
+    setLines([...lines, { inventoryItemId: "", description: "", quantity: 1, unitPrice: 0, productionCost: 0, costEdited: false, customization: "" }]);
 
   const removeLine = (i: number) => setLines(lines.filter((_, idx) => idx !== i));
 
@@ -72,11 +75,37 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
     setLines(lines.map((line, idx) => (idx === i ? { ...line, [field]: value } : line)));
   };
 
+  // Costo sugerido: cantidad × costo promedio de compra del artículo
+  const autoCost = (item: ItemForSale | undefined, quantity: number) =>
+    item ? Math.round(item.avgUnitCost * quantity * 100) / 100 : 0;
+
+  const updateQuantity = (i: number, quantity: number) => {
+    setLines(
+      lines.map((line, idx) =>
+        idx === i
+          ? {
+              ...line,
+              quantity,
+              productionCost: line.costEdited
+                ? line.productionCost
+                : autoCost(getSelectedItem(line), quantity),
+            }
+          : line
+      )
+    );
+  };
+
   const selectItem = (i: number, item: ItemForSale) => {
     setLines(
       lines.map((line, idx) =>
         idx === i
-          ? { ...line, inventoryItemId: item.id, description: item.description }
+          ? {
+              ...line,
+              inventoryItemId: item.id,
+              description: item.description,
+              productionCost: autoCost(item, line.quantity),
+              costEdited: false,
+            }
           : line
       )
     );
@@ -268,7 +297,7 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
                       min={1}
                       max={selected?.availableStock ?? undefined}
                       value={line.quantity}
-                      onChange={(e) => updateLine(i, "quantity", parseInt(e.target.value) || 1)}
+                      onChange={(e) => updateQuantity(i, parseInt(e.target.value) || 1)}
                       className="mt-1 h-9 text-sm"
                     />
                   </div>
@@ -290,10 +319,25 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
                       step="0.01"
                       min={0}
                       value={line.productionCost}
-                      onChange={(e) => updateLine(i, "productionCost", parseFloat(e.target.value) || 0)}
+                      onChange={(e) =>
+                        setLines(
+                          lines.map((l, idx) =>
+                            idx === i
+                              ? { ...l, productionCost: parseFloat(e.target.value) || 0, costEdited: true }
+                              : l
+                          )
+                        )
+                      }
                       className="mt-1 h-9 text-sm"
                       placeholder="0.00"
                     />
+                    {selected && (
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {selected.avgUnitCost > 0
+                          ? `Prom. ${formatCurrency(selected.avgUnitCost)} c/u`
+                          : "Sin compras registradas"}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <Label className="text-xs">Ganancia</Label>

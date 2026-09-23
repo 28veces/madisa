@@ -5,13 +5,14 @@ import { requireBusiness } from "@/lib/require-auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SaleStatus, UserRole, BusinessLine } from "@prisma/client";
-import { stockInclude, availableStock } from "@/lib/stock";
+import { stockInclude, availableStock, getAverageUnitCosts, lineCost } from "@/lib/stock";
 
 const saleItemSchema = z.object({
   inventoryItemId: z.string().min(1),
   quantity: z.coerce.number().int().min(1),
   unitPrice: z.coerce.number().min(0),
-  productionCost: z.coerce.number().min(0).default(0),
+  // Si no viene, se usa cantidad × costo promedio de compra del artículo
+  productionCost: z.coerce.number().min(0).optional(),
   customization: z.string().optional(),
 });
 
@@ -55,6 +56,15 @@ export async function createSale(data: z.infer<typeof saleSchema>) {
         0
       );
 
+      const avgCosts = await getAverageUnitCosts(
+        tx,
+        parsed.data.items.map((i) => i.inventoryItemId)
+      );
+      const items = parsed.data.items.map((i) => ({
+        ...i,
+        productionCost: i.productionCost ?? lineCost(avgCosts.get(i.inventoryItemId) ?? 0, i.quantity),
+      }));
+
       await tx.sale.create({
         data: {
           clientName: parsed.data.clientName,
@@ -64,7 +74,7 @@ export async function createSale(data: z.infer<typeof saleSchema>) {
           businessLine: parsed.data.businessLine,
           totalAmount,
           businessId,
-          items: { create: parsed.data.items },
+          items: { create: items },
         },
       });
     });

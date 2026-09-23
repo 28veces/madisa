@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getAvailableStock } from "@/lib/stock";
+import { getAvailableStock, getAverageUnitCosts, lineCost } from "@/lib/stock";
 
 export interface PublicOrderData {
   clientName: string;
@@ -10,7 +10,6 @@ export interface PublicOrderData {
     productId: string;
     quantity: number;
     unitPrice: number;
-    productionCost?: number;
     customization?: string;
   }>;
   totalAmount: number;
@@ -52,6 +51,12 @@ export async function createPublicOrder(data: PublicOrderData) {
         })
       );
 
+      // El costo se calcula en el servidor (costo promedio de compra), nunca desde el cliente
+      const avgCosts = await getAverageUnitCosts(
+        tx,
+        resolvedItems.flatMap((i) => (i.inventoryItemId ? [i.inventoryItemId] : []))
+      );
+
       const newSale = await tx.sale.create({
         data: {
           clientName: data.clientName,
@@ -68,7 +73,7 @@ export async function createPublicOrder(data: PublicOrderData) {
                 inventoryItemId: item.inventoryItemId!,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                productionCost: item.productionCost ?? 0,
+                productionCost: lineCost(avgCosts.get(item.inventoryItemId!) ?? 0, item.quantity),
                 customization: item.customization,
               })),
           },

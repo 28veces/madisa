@@ -100,8 +100,11 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 
 - **US-33** ✅ Como `ADMIN`, quiero definir socios con un porcentaje de participación y orden de despliegue.
   `src/actions/partners.ts`
-- **US-34** ✅ Como `ADMIN`, quiero ver la ganancia neta mensual (ventas brutas − costo de producción) distribuida automáticamente según el porcentaje de cada socio, con lo no asignado calculado aparte.
+- **US-34** ✅ Como `ADMIN`, quiero ver la utilidad neta mensual distribuida automáticamente según el porcentaje de cada socio, con lo no asignado calculado aparte.
   `src/actions/ganancias.ts:getGananciasByYear`
+  - Criterio (2026-09-22): utilidad neta = ventas brutas − costo de lo vendido − consumo de insumos y mermas (salidas de US-49 × costo promedio) − egresos operativos del mes. Las inversiones de capital no se restan (son aportes por socio, US-31).
+  - Criterio: el costo de producción de cada línea de venta se llena solo con cantidad × costo promedio ponderado de compra del artículo; es editable y queda fijo en la venta. En pedidos públicos se calcula en el servidor.
+  - Bug corregido: el costo se escribía a mano y por defecto era 0, así que se repartía la venta completa entre los socios. Las ventas viejas con costo 0 se recalculan con `npm run db:recalc-costs` (prueba) y `-- --apply` (guardar).
 - **US-35** ✅ Como `ADMIN`/`SECRETARY`/`ACCOUNTANT`, quiero seleccionar el año a consultar, limitado a años con ventas reales registradas.
   `src/actions/ganancias.ts:getAvailableYears`
 

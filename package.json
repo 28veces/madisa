@@ -12,6 +12,7 @@
     "db:seed": "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "db:seed:demo": "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed-demo.ts",
     "db:seed:june": "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed-june2026.ts",
+    "db:recalc-costs": "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/recalc-sale-costs.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {
