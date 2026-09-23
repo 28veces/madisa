@@ -42,6 +42,8 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   `src/actions/products.ts:createProduct`, `src/app/(admin)/admin/catalogo/nuevo`
 - **US-14** ✅ Como `ADMIN`/`SECRETARY`, quiero editar y desactivar productos existentes.
   `src/actions/products.ts:updateProduct`
+  - Criterio (2026-09-22): el artículo de inventario se elige con un buscador por código o descripción (como en ventas); el campo muestra el artículo elegido, su stock y su costo promedio, y se puede quitar el vínculo.
+  - Bug corregido: los productos del seed usan su nombre como id y la página de edición daba 404 porque el id llegaba codificado en la URL.
 - **US-15** ✅ Como `ADMIN`, quiero eliminar productos.
   `src/actions/products.ts:deleteProduct`
 - **US-16** ✅ Como `ADMIN`/`SECRETARY`/`ACCOUNTANT`, quiero listar todos los productos de mi negocio con su disponibilidad calculada (comprado − vendido).

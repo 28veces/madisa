@@ -15,13 +15,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createProduct, updateProduct } from "@/actions/products";
-import { ImageIcon, Upload } from "lucide-react";
+import { ImageIcon, Upload, X } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface InventoryOption {
   id: string;
   code: string;
   description: string;
   availableStock: number;
+  avgUnitCost?: number;
 }
 
 interface FormValues {
@@ -85,6 +87,23 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
       isActive: product?.isActive ?? true,
     },
   });
+
+  const itemLabel = (item: InventoryOption) => `${item.code} - ${item.description}`;
+  const linkedItem = inventoryItems.find((it) => it.id === watch("inventoryItemId"));
+  const [itemSearch, setItemSearch] = useState(linkedItem ? itemLabel(linkedItem) : "");
+  const [itemSearchOpen, setItemSearchOpen] = useState(false);
+  const q = itemSearch.trim().toLowerCase();
+  const filteredInventory = linkedItem
+    ? inventoryItems
+    : inventoryItems.filter(
+        (it) => it.code.toLowerCase().includes(q) || it.description.toLowerCase().includes(q)
+      );
+
+  const selectInventoryItem = (item: InventoryOption | null) => {
+    setValue("inventoryItemId", item?.id ?? "");
+    setItemSearch(item ? itemLabel(item) : "");
+    setItemSearchOpen(false);
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -237,22 +256,73 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
             <p className="text-xs text-gray-500 mb-1">
               Vincula este producto al artículo en inventario. Solo se mostrará en el catálogo si hay stock disponible.
             </p>
-            <Select
-              value={watch("inventoryItemId") ?? ""}
-              onValueChange={(v) => setValue("inventoryItemId", v === "none" ? "" : (v ?? ""))}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Sin vincular (arreglos u otros)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sin vincular (arreglos u otros)</SelectItem>
-                {inventoryItems.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.code} — {item.description} (stock: {item.availableStock})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="relative mt-1">
+              <Input
+                type="text"
+                value={itemSearch}
+                onChange={(e) => {
+                  // Editar el texto suelta el artículo vinculado hasta que se elija otro de la lista
+                  setItemSearch(e.target.value);
+                  setValue("inventoryItemId", "");
+                  setItemSearchOpen(true);
+                }}
+                onFocus={() => setItemSearchOpen(true)}
+                onBlur={() => setTimeout(() => setItemSearchOpen(false), 150)}
+                placeholder="Buscar por código o descripción, ej: taza"
+                className="pr-9"
+                autoComplete="off"
+              />
+              {itemSearch && (
+                <button
+                  type="button"
+                  onClick={() => selectInventoryItem(null)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                  aria-label="Quitar artículo vinculado"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+              {itemSearchOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={() => selectInventoryItem(null)}
+                    className="w-full text-left p-2 hover:bg-gray-100 text-sm border-b text-gray-500"
+                  >
+                    Sin vincular (arreglos u otros)
+                  </button>
+                  {filteredInventory.length === 0 ? (
+                    <div className="p-2 text-sm text-gray-500">Sin resultados</div>
+                  ) : (
+                    filteredInventory.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => selectInventoryItem(item)}
+                        className="w-full text-left p-2 hover:bg-gray-100 text-sm border-b last:border-b-0"
+                      >
+                        <div className="font-medium">{itemLabel(item)}</div>
+                        <div className={`text-xs ${item.availableStock > 0 ? "text-gray-500" : "text-red-500"}`}>
+                          Stock: {item.availableStock}
+                          {item.availableStock <= 0 && " (no se mostrará en el catálogo)"}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {linkedItem
+                ? `Vinculado · stock ${linkedItem.availableStock}${
+                    linkedItem.avgUnitCost ? ` · costo prom. ${formatCurrency(linkedItem.avgUnitCost)} c/u` : ""
+                  }`
+                : watch("inventoryItemId")
+                  ? "Vinculado a un artículo inactivo"
+                  : itemSearch
+                    ? "Elige un artículo de la lista para vincularlo"
+                  : "Sin vincular (arreglos u otros)"}
+            </p>
           </div>
         )}
 

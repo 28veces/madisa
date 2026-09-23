@@ -8,7 +8,9 @@ interface Props {
 }
 
 export default async function EditarProductoPage({ params }: Props) {
-  const { id } = await params;
+  // Los productos del seed usan el nombre como id (con espacios/acentos) y el
+  // segmento llega codificado; decodificarlo no afecta a los ids normales (cuid).
+  const id = decodeURIComponent((await params).id);
   const [product, inventoryItems] = await Promise.all([
     getProduct(id).catch(() => null),
     getInventoryItemsForSale().catch(() => []),
