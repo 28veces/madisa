@@ -204,6 +204,7 @@ export async function getInventoryItemsWithPurchaseQty() {
     },
     orderBy: { code: "asc" },
   });
+  const avgCosts = await getAverageUnitCosts(prisma, items.map((i) => i.id));
 
   return items.map((item) => {
     const totals = stockTotals(item);
@@ -218,6 +219,7 @@ export async function getInventoryItemsWithPurchaseQty() {
       totalQuantitySold: totals.sold,
       totalQuantityAdjusted: totals.adjusted,
       availableStock: totals.available,
+      avgUnitCost: avgCosts.get(item.id) ?? 0,
     };
   });
 }

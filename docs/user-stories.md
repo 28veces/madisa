@@ -53,6 +53,7 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   `src/actions/inventory-items.ts`
 - **US-18** ✅ Como `ADMIN`/`SECRETARY`/`ACCOUNTANT`, quiero ver la disponibilidad de cada artículo (suma de compras − suma de ventas), sin campo de stock manual que se pueda desincronizar.
   `src/actions/inventory-items.ts:getInventoryItemsWithPurchaseQty`
+  - Criterio (2026-09-22): Inventario muestra también el costo promedio ponderado por unidad (Σ cantidad × costo unitario / Σ cantidad de sus compras), el mismo que se usa como costo sugerido en las ventas.
 - **US-19** ✅ Como `ADMIN`, quiero eliminar artículos de inventario que ya no se usan.
 - **US-49** ✅ Como `ADMIN`/`SECRETARY`, quiero registrar salidas de inventario que no son ventas (consumo de insumos en producción, mermas/daños, ajustes por conteo físico) para que el stock refleje lo que realmente queda.
   `src/actions/inventory-adjustments.ts`, `src/lib/stock.ts`, `src/app/(admin)/admin/salidas/`

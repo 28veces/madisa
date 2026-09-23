@@ -6,6 +6,7 @@ import { Plus, Search, ChevronLeft, ChevronRight, Pencil, PackageMinus } from "l
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { formatCurrency } from "@/lib/utils";
 
 interface InventoryItem {
   id: string;
@@ -18,6 +19,7 @@ interface InventoryItem {
   totalQuantitySold: number;
   totalQuantityAdjusted: number;
   availableStock: number;
+  avgUnitCost: number;
 }
 
 interface Props {
@@ -132,6 +134,7 @@ export default function InventarioContent({ items }: Props) {
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Vendido</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Salidas</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Stock</th>
+                <th className="text-right py-3 px-4 font-medium text-gray-600" title="Costo promedio ponderado por unidad según tus compras">Costo prom.</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Nota</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Acciones</th>
               </tr>
@@ -139,7 +142,7 @@ export default function InventarioContent({ items }: Props) {
             <tbody className="divide-y divide-gray-50">
               {paginated.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="text-center py-10 text-gray-400">
+                  <td colSpan={10} className="text-center py-10 text-gray-400">
                     No hay artículos. <Link href="/admin/articulos/nuevo" className="text-rose-600 hover:underline">Crear primero.</Link>
                   </td>
                 </tr>
@@ -170,6 +173,9 @@ export default function InventarioContent({ items }: Props) {
                     <span className={item.availableStock <= 0 ? "text-red-600" : item.availableStock <= 3 ? "text-amber-600" : "text-gray-900"}>
                       {item.availableStock}
                     </span>
+                  </td>
+                  <td className="py-3 px-4 text-right text-gray-600">
+                    {item.avgUnitCost > 0 ? formatCurrency(item.avgUnitCost) : "—"}
                   </td>
                   <td className="py-3 px-4 text-sm text-gray-600">
                     {item.note || "—"}
