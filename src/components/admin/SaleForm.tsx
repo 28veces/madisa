@@ -32,6 +32,7 @@ interface SaleLineItem {
   quantity: number;
   unitPrice: number;
   productionCost: number;
+  extraCost: number;
   // true cuando el usuario escribió el costo a mano; entonces ya no se recalcula solo
   costEdited: boolean;
   customization: string;
@@ -51,7 +52,7 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
   const [status, setStatus] = useState("PENDING");
   const [businessLine, setBusinessLine] = useState("PERSONALIZACION");
   const [lines, setLines] = useState<SaleLineItem[]>([
-    { inventoryItemId: "", description: "", quantity: 1, unitPrice: 0, productionCost: 0, costEdited: false, customization: "" },
+    { inventoryItemId: "", description: "", quantity: 1, unitPrice: 0, productionCost: 0, extraCost: 0, costEdited: false, customization: "" },
   ]);
   const [searchOpen, setSearchOpen] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(false);
@@ -67,7 +68,7 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
   };
 
   const addLine = () =>
-    setLines([...lines, { inventoryItemId: "", description: "", quantity: 1, unitPrice: 0, productionCost: 0, costEdited: false, customization: "" }]);
+    setLines([...lines, { inventoryItemId: "", description: "", quantity: 1, unitPrice: 0, productionCost: 0, extraCost: 0, costEdited: false, customization: "" }]);
 
   const removeLine = (i: number) => setLines(lines.filter((_, idx) => idx !== i));
 
@@ -116,8 +117,11 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
     allItems.find((item) => item.id === line.inventoryItemId);
 
   const total = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
-  const totalCosto = lines.reduce((sum, line) => sum + line.productionCost, 0);
-  const gananciaNeta = total - totalCosto;
+  const totalCompra = lines.reduce((sum, line) => sum + line.productionCost, 0);
+  const totalProduccion = lines.reduce((sum, line) => sum + line.extraCost, 0);
+  const gananciaNeta = total - totalCompra - totalProduccion;
+  const lineGanancia = (line: SaleLineItem) =>
+    line.quantity * line.unitPrice - line.productionCost - line.extraCost;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,11 +142,12 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
       notes,
       status: status as never,
       businessLine: businessLine as never,
-      items: lines.map(({ inventoryItemId, quantity, unitPrice, productionCost, customization }) => ({
+      items: lines.map(({ inventoryItemId, quantity, unitPrice, productionCost, extraCost, customization }) => ({
         inventoryItemId,
         quantity,
         unitPrice,
         productionCost,
+        extraCost,
         customization,
       })),
     });
@@ -289,7 +294,7 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
                   )}
                 </div>
 
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-6 gap-2">
                   <div>
                     <Label className="text-xs">Cant.</Label>
                     <Input
@@ -313,7 +318,7 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Costo prod.</Label>
+                    <Label className="text-xs">Valor de compra</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -340,13 +345,27 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
                     )}
                   </div>
                   <div>
+                    <Label className="text-xs">Costo prod.</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      value={line.extraCost}
+                      onChange={(e) => updateLine(i, "extraCost", parseFloat(e.target.value) || 0)}
+                      className="mt-1 h-9 text-sm"
+                      placeholder="0.00"
+                      title="Estimado de tinta, luz, papel, tape y demás para esta línea"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-0.5">Tinta, luz, papel…</p>
+                  </div>
+                  <div>
                     <Label className="text-xs">Ganancia</Label>
                     <div className={`mt-1 h-9 text-sm flex items-center font-medium rounded px-2 ${
-                      line.quantity * line.unitPrice - line.productionCost >= 0
+                      lineGanancia(line) >= 0
                         ? "text-green-700 bg-green-50"
                         : "text-red-700 bg-red-50"
                     }`}>
-                      {formatCurrency(line.quantity * line.unitPrice - line.productionCost)}
+                      {formatCurrency(lineGanancia(line))}
                     </div>
                   </div>
                   <div>
@@ -382,7 +401,8 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
 
         <div className="mt-3 flex flex-col items-end gap-1 text-sm">
           <p className="text-gray-600">Venta total: <span className="font-semibold text-gray-900">{formatCurrency(total)}</span></p>
-          <p className="text-gray-600">Costo producción: <span className="font-semibold text-gray-900">{formatCurrency(totalCosto)}</span></p>
+          <p className="text-gray-600">Valor de compra: <span className="font-semibold text-gray-900">{formatCurrency(totalCompra)}</span></p>
+          <p className="text-gray-600">Costo producción: <span className="font-semibold text-gray-900">{formatCurrency(totalProduccion)}</span></p>
           <p className="text-base font-bold">
             Ganancia estimada:{" "}
             <span className={gananciaNeta >= 0 ? "text-green-600" : "text-red-600"}>

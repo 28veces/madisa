@@ -25,12 +25,13 @@ export default async function GananciasPage({ searchParams }: Props) {
   const totales = byMonth.reduce(
     (acc, m) => ({
       ventasBrutas: acc.ventasBrutas + m.ventasBrutas,
+      costoCompra: acc.costoCompra + m.costoCompra,
       costoProduccion: acc.costoProduccion + m.costoProduccion,
-      consumoInsumos: acc.consumoInsumos + m.consumoInsumos,
+      mermas: acc.mermas + m.mermas,
       egresos: acc.egresos + m.egresos,
       gananciaNeta: acc.gananciaNeta + m.gananciaNeta,
     }),
-    { ventasBrutas: 0, costoProduccion: 0, consumoInsumos: 0, egresos: 0, gananciaNeta: 0 }
+    { ventasBrutas: 0, costoCompra: 0, costoProduccion: 0, mermas: 0, egresos: 0, gananciaNeta: 0 }
   );
 
   const pctAsignado = partners.reduce((s, p) => s + Number(p.percentage), 0);
@@ -41,7 +42,7 @@ export default async function GananciasPage({ searchParams }: Props) {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ganancias</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Utilidad neta = ventas − costo de lo vendido − consumo de insumos y mermas − egresos. Se reparte por socio.
+            Utilidad neta = ventas − valor de compra − costo de producción − mermas − egresos. Se reparte por socio.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -69,18 +70,22 @@ export default async function GananciasPage({ searchParams }: Props) {
       </div>
 
       {/* Resumen anual */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Ventas brutas {selectedYear}</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totales.ventasBrutas)}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Costo de lo vendido</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Valor de compra</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totales.costoCompra)}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Costo producción</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totales.costoProduccion)}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">Consumo y mermas</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totales.consumoInsumos)}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Mermas</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totales.mermas)}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Egresos</p>
@@ -102,8 +107,9 @@ export default async function GananciasPage({ searchParams }: Props) {
               <tr className="border-b bg-gray-50">
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Mes</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Ventas</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-600">Costo vendido</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-600">Consumo/mermas</th>
+                <th className="text-right py-3 px-4 font-medium text-gray-600">Valor compra</th>
+                <th className="text-right py-3 px-4 font-medium text-gray-600">Costo prod.</th>
+                <th className="text-right py-3 px-4 font-medium text-gray-600">Mermas</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Egresos</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-600 border-l border-gray-200">Utilidad neta</th>
                 {partners.map((p) => (
@@ -120,11 +126,12 @@ export default async function GananciasPage({ searchParams }: Props) {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {byMonth.map((m) => (
-                <tr key={m.month} className={`hover:bg-gray-50/50 transition-colors ${m.numVentas === 0 && m.egresos === 0 && m.consumoInsumos === 0 ? "opacity-40" : ""}`}>
+                <tr key={m.month} className={`hover:bg-gray-50/50 transition-colors ${m.numVentas === 0 && m.egresos === 0 && m.mermas === 0 ? "opacity-40" : ""}`}>
                   <td className="py-3 px-4 font-medium text-gray-900">{m.label}</td>
                   <td className="py-3 px-4 text-right text-gray-700">{formatCurrency(m.ventasBrutas)}</td>
+                  <td className="py-3 px-4 text-right text-gray-500">{formatCurrency(m.costoCompra)}</td>
                   <td className="py-3 px-4 text-right text-gray-500">{formatCurrency(m.costoProduccion)}</td>
-                  <td className="py-3 px-4 text-right text-gray-500">{formatCurrency(m.consumoInsumos)}</td>
+                  <td className="py-3 px-4 text-right text-gray-500">{formatCurrency(m.mermas)}</td>
                   <td className="py-3 px-4 text-right text-gray-500">{formatCurrency(m.egresos)}</td>
                   <td className={`py-3 px-4 text-right font-semibold border-l border-gray-200 ${
                     m.gananciaNeta >= 0 ? "text-green-700" : "text-red-600"
@@ -146,8 +153,9 @@ export default async function GananciasPage({ searchParams }: Props) {
               <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
                 <td className="py-3 px-4 text-gray-900">Total {selectedYear}</td>
                 <td className="py-3 px-4 text-right text-gray-900">{formatCurrency(totales.ventasBrutas)}</td>
+                <td className="py-3 px-4 text-right text-gray-700">{formatCurrency(totales.costoCompra)}</td>
                 <td className="py-3 px-4 text-right text-gray-700">{formatCurrency(totales.costoProduccion)}</td>
-                <td className="py-3 px-4 text-right text-gray-700">{formatCurrency(totales.consumoInsumos)}</td>
+                <td className="py-3 px-4 text-right text-gray-700">{formatCurrency(totales.mermas)}</td>
                 <td className="py-3 px-4 text-right text-gray-700">{formatCurrency(totales.egresos)}</td>
                 <td className={`py-3 px-4 text-right border-l border-gray-200 ${
                   totales.gananciaNeta >= 0 ? "text-green-700" : "text-red-600"

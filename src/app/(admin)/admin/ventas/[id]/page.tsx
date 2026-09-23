@@ -115,6 +115,7 @@ export default async function SaleDetailPage({ params }: Props) {
           quantity: item.quantity,
           unitPrice: Number(item.unitPrice),
           productionCost: Number(item.productionCost),
+          extraCost: Number(item.extraCost),
         }))}
       />
     </div>

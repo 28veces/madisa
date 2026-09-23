@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "SaleItem" ADD COLUMN     "extraCost" DOUBLE PRECISION NOT NULL DEFAULT 0;
+

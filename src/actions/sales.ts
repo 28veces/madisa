@@ -11,8 +11,10 @@ const saleItemSchema = z.object({
   inventoryItemId: z.string().min(1),
   quantity: z.coerce.number().int().min(1),
   unitPrice: z.coerce.number().min(0),
-  // Si no viene, se usa cantidad × costo promedio de compra del artículo
+  // Valor de compra. Si no viene, se usa cantidad × costo promedio de compra del artículo
   productionCost: z.coerce.number().min(0).optional(),
+  // Costo de producción estimado (tinta, luz, papel, tape…)
+  extraCost: z.coerce.number().min(0).default(0),
   customization: z.string().optional(),
 });
 
@@ -135,10 +137,14 @@ export async function getSale(id: string) {
 }
 
 const saleItemCostsSchema = z.array(
-  z.object({ id: z.string().min(1), productionCost: z.coerce.number().min(0) })
+  z.object({
+    id: z.string().min(1),
+    productionCost: z.coerce.number().min(0),
+    extraCost: z.coerce.number().min(0),
+  })
 );
 
-// Permite ajustar el costo de producción después de creada la venta
+// Permite ajustar el valor de compra y el costo de producción después de creada la venta
 // (p. ej. pedidos del catálogo público, o personalizaciones con costo extra).
 export async function updateSaleItemCosts(
   saleId: string,
@@ -159,7 +165,10 @@ export async function updateSaleItemCosts(
 
   await prisma.$transaction(
     parsed.data.map((i) =>
-      prisma.saleItem.update({ where: { id: i.id }, data: { productionCost: i.productionCost } })
+      prisma.saleItem.update({
+        where: { id: i.id },
+        data: { productionCost: i.productionCost, extraCost: i.extraCost },
+      })
     )
   );
 

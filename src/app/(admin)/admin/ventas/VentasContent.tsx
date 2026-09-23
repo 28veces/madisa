@@ -13,6 +13,7 @@ interface SaleItem {
   quantity: number;
   unitPrice: number;
   productionCost: number;
+  extraCost: number;
   inventoryItem: { description: string };
 }
 
@@ -128,7 +129,7 @@ export default function VentasContent({ sales }: Props) {
               {paginated.map((sale) => {
                 const statusInfo = STATUS_LABELS[sale.status] ?? STATUS_LABELS.PENDING;
                 const ganancia = sale.items.reduce(
-                  (s, i) => s + i.quantity * Number(i.unitPrice) - Number(i.productionCost),
+                  (s, i) => s + i.quantity * Number(i.unitPrice) - Number(i.productionCost) - Number(i.extraCost),
                   0
                 );
                 return (

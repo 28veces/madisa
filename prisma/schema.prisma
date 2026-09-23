@@ -84,7 +84,10 @@ model SaleItem {
   inventoryItemId String
   quantity        Int
   unitPrice       Float
+  // Valor de compra de la línea: cantidad × costo promedio del artículo (se sugiere solo)
   productionCost  Float         @default(0)
+  // Costo de producción estimado de la línea: tinta, luz, papel, tape… (lo escribe el usuario)
+  extraCost       Float         @default(0)
   customization   String?
   inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
   sale            Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)

@@ -16,7 +16,15 @@ interface Item {
   quantity: number;
   unitPrice: number;
   productionCost: number;
+  extraCost: number;
 }
+
+type Costs = Record<string, { productionCost: number; extraCost: number }>;
+
+const initialCosts = (items: Item[]): Costs =>
+  Object.fromEntries(
+    items.map((i) => [i.id, { productionCost: i.productionCost, extraCost: i.extraCost }])
+  );
 
 interface Props {
   saleId: string;
@@ -27,20 +35,24 @@ interface Props {
 
 export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }: Props) {
   const router = useRouter();
-  const [costs, setCosts] = useState<Record<string, number>>(
-    Object.fromEntries(items.map((i) => [i.id, i.productionCost]))
-  );
+  const [costs, setCosts] = useState<Costs>(() => initialCosts(items));
   const [saving, setSaving] = useState(false);
 
-  const dirty = items.some((i) => costs[i.id] !== i.productionCost);
-  const totalCosto = items.reduce((sum, i) => sum + costs[i.id], 0);
-  const totalGanancia = items.reduce((sum, i) => sum + i.quantity * i.unitPrice - costs[i.id], 0);
+  const dirty = items.some(
+    (i) => costs[i.id].productionCost !== i.productionCost || costs[i.id].extraCost !== i.extraCost
+  );
+  const totalCompra = items.reduce((sum, i) => sum + costs[i.id].productionCost, 0);
+  const totalProduccion = items.reduce((sum, i) => sum + costs[i.id].extraCost, 0);
+  const totalGanancia = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0) - totalCompra - totalProduccion;
+
+  const setCost = (id: string, field: "productionCost" | "extraCost", value: number) =>
+    setCosts({ ...costs, [id]: { ...costs[id], [field]: value } });
 
   const handleSave = async () => {
     setSaving(true);
     const result = await updateSaleItemCosts(
       saleId,
-      items.map((i) => ({ id: i.id, productionCost: costs[i.id] }))
+      items.map((i) => ({ id: i.id, ...costs[i.id] }))
     );
     setSaving(false);
     if (result.error) return toast.error(result.error);
@@ -59,7 +71,7 @@ export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }:
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCosts(Object.fromEntries(items.map((i) => [i.id, i.productionCost])))}
+                  onClick={() => setCosts(initialCosts(items))}
                 >
                   Descartar
                 </Button>
@@ -83,6 +95,7 @@ export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }:
                   <th className="text-left py-2 px-2 font-medium text-gray-600">Producto</th>
                   <th className="text-right py-2 px-2 font-medium text-gray-600">Cantidad</th>
                   <th className="text-right py-2 px-2 font-medium text-gray-600">Precio Unit.</th>
+                  <th className="text-right py-2 px-2 font-medium text-gray-600">Valor Compra</th>
                   <th className="text-right py-2 px-2 font-medium text-gray-600">Costo Prod.</th>
                   <th className="text-right py-2 px-2 font-medium text-gray-600">Subtotal</th>
                   <th className="text-right py-2 px-2 font-medium text-gray-600">Ganancia</th>
@@ -91,7 +104,7 @@ export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }:
               <tbody className="divide-y">
                 {items.map((item) => {
                   const subtotal = item.quantity * item.unitPrice;
-                  const ganancia = subtotal - costs[item.id];
+                  const ganancia = subtotal - costs[item.id].productionCost - costs[item.id].extraCost;
                   return (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="py-3 px-2">
@@ -108,15 +121,28 @@ export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }:
                             type="number"
                             step="0.01"
                             min={0}
-                            value={costs[item.id]}
-                            onChange={(e) =>
-                              setCosts({ ...costs, [item.id]: parseFloat(e.target.value) || 0 })
-                            }
+                            value={costs[item.id].productionCost}
+                            onChange={(e) => setCost(item.id, "productionCost", parseFloat(e.target.value) || 0)}
+                            className="h-8 w-24 text-sm text-right ml-auto"
+                            aria-label={`Valor de compra de ${item.description}`}
+                          />
+                        ) : (
+                          formatCurrency(costs[item.id].productionCost)
+                        )}
+                      </td>
+                      <td className="text-right py-3 px-2">
+                        {canEdit ? (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min={0}
+                            value={costs[item.id].extraCost}
+                            onChange={(e) => setCost(item.id, "extraCost", parseFloat(e.target.value) || 0)}
                             className="h-8 w-24 text-sm text-right ml-auto"
                             aria-label={`Costo de producción de ${item.description}`}
                           />
                         ) : (
-                          formatCurrency(costs[item.id])
+                          formatCurrency(costs[item.id].extraCost)
                         )}
                       </td>
                       <td className="text-right py-3 px-2 font-medium">{formatCurrency(subtotal)}</td>
@@ -131,7 +157,7 @@ export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }:
           </div>
           {canEdit && (
             <p className="text-xs text-gray-400 mt-3">
-              El costo es el total de la línea (cantidad × costo unitario). Se sugiere con el costo promedio de compra y puedes ajustarlo.
+              Ambos valores son el total de la línea. El valor de compra se sugiere con el costo promedio del artículo; el costo de producción es tu estimado de tinta, luz, papel, tape y demás.
             </p>
           )}
         </CardContent>
@@ -148,8 +174,12 @@ export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }:
               <span className="font-semibold text-gray-900">{formatCurrency(totalAmount)}</span>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
+              <span className="text-gray-600">Valor de compra:</span>
+              <span className="font-semibold text-gray-900">{formatCurrency(totalCompra)}</span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b">
               <span className="text-gray-600">Costo producción:</span>
-              <span className="font-semibold text-gray-900">{formatCurrency(totalCosto)}</span>
+              <span className="font-semibold text-gray-900">{formatCurrency(totalProduccion)}</span>
             </div>
             <div className="flex justify-between items-center py-3 bg-green-50 px-3 rounded-lg">
               <span className="font-semibold text-gray-900">Ganancia neta:</span>

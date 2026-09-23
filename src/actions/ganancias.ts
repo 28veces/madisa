@@ -26,14 +26,22 @@ export async function getGananciasByYear(year: number) {
         createdAt: { gte: start, lt: end },
         status: { not: "CANCELLED" },
       },
-      include: { items: { select: { quantity: true, unitPrice: true, productionCost: true } } },
+      include: {
+        items: { select: { quantity: true, unitPrice: true, productionCost: true, extraCost: true } },
+      },
     }),
     prisma.partner.findMany({
       where: { businessId },
       orderBy: { order: "asc" },
     }),
+    // El consumo de insumos ya va estimado en el costo de producción de cada venta;
+    // aquí solo se restan mermas y ajustes por conteo para no contarlo dos veces.
     prisma.inventoryAdjustment.findMany({
-      where: { businessId, date: { gte: startUtc, lt: endUtc } },
+      where: {
+        businessId,
+        date: { gte: startUtc, lt: endUtc },
+        reason: { in: ["DAMAGE", "COUNT_ADJUSTMENT"] },
+      },
       select: { inventoryItemId: true, quantity: true, date: true },
     }),
     prisma.expense.findMany({
@@ -42,7 +50,7 @@ export async function getGananciasByYear(year: number) {
     }),
   ]);
 
-  // Las salidas (consumo de insumos, mermas) se valoran al costo promedio de compra
+  // Las mermas se valoran al costo promedio de compra
   const avgCosts = await getAverageUnitCosts(
     prisma,
     adjustments.map((a) => a.inventoryItemId)
@@ -54,19 +62,23 @@ export async function getGananciasByYear(year: number) {
       (sum, s) => sum + s.items.reduce((si, i) => si + i.quantity * Number(i.unitPrice), 0),
       0
     );
-    const costoProduccion = monthSales.reduce(
+    const costoCompra = monthSales.reduce(
       (sum, s) => sum + s.items.reduce((si, i) => si + Number(i.productionCost), 0),
       0
     );
-    const consumoInsumos = adjustments
+    const costoProduccion = monthSales.reduce(
+      (sum, s) => sum + s.items.reduce((si, i) => si + Number(i.extraCost), 0),
+      0
+    );
+    const mermas = adjustments
       .filter((a) => a.date.getUTCMonth() === m)
       .reduce((sum, a) => sum + a.quantity * (avgCosts.get(a.inventoryItemId) ?? 0), 0);
     const egresos = expenses
       .filter((e) => e.expenseDate.getUTCMonth() === m)
       .reduce((sum, e) => sum + Number(e.amount), 0);
-    // Utilidad neta a repartir: ventas − costo de lo vendido − consumo/mermas − egresos operativos.
+    // Utilidad neta a repartir: ventas − valor de compra − costo de producción − mermas − egresos.
     // Las inversiones de capital no se restan: se registran como aportes por socio.
-    const gananciaNeta = ventasBrutas - costoProduccion - consumoInsumos - egresos;
+    const gananciaNeta = ventasBrutas - costoCompra - costoProduccion - mermas - egresos;
 
     const distribucion = partners.map((p) => ({
       id: p.id,
@@ -82,8 +94,9 @@ export async function getGananciasByYear(year: number) {
       month: m,
       label: MONTHS[m],
       ventasBrutas,
+      costoCompra,
       costoProduccion,
-      consumoInsumos,
+      mermas,
       egresos,
       gananciaNeta,
       distribucion,

@@ -59,7 +59,7 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   `src/actions/inventory-adjustments.ts`, `src/lib/stock.ts`, `src/app/(admin)/admin/salidas/`
   - Criterio: aplica a cualquier artículo, no solo insumos. Se registra artículo, cantidad (entera, en la unidad de compra: paquete, botella…), fecha, motivo y nota opcional.
   - Criterio: la disponibilidad pasa a ser compras − ventas − salidas en todo el sistema (Inventario, catálogo admin y público, ventas, pedidos públicos). No se puede sacar más de lo disponible.
-  - Criterio: la salida no cuenta como egreso (el costo ya se registró en la compra).
+  - Criterio: la salida no cuenta como egreso (el costo ya se registró en la compra). En Ganancias solo restan las mermas y ajustes de conteo; el consumo de insumos va estimado en el costo de producción de cada venta (US-34).
   - Criterio: `ADMIN` puede eliminar una salida (el stock se repone); `ACCOUNTANT` solo la ve.
   - Futuro: descuento automático de insumos por receta de producto al vender (requiere recetas y cantidades fraccionarias).
 
@@ -104,7 +104,8 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   `src/actions/partners.ts`
 - **US-34** ✅ Como `ADMIN`, quiero ver la utilidad neta mensual distribuida automáticamente según el porcentaje de cada socio, con lo no asignado calculado aparte.
   `src/actions/ganancias.ts:getGananciasByYear`
-  - Criterio (2026-09-22): utilidad neta = ventas brutas − costo de lo vendido − consumo de insumos y mermas (salidas de US-49 × costo promedio) − egresos operativos del mes. Las inversiones de capital no se restan (son aportes por socio, US-31).
+  - Criterio (2026-09-22): utilidad neta = ventas brutas − valor de compra − costo de producción − mermas (salidas de US-49 por merma o ajuste de conteo × costo promedio) − egresos operativos del mes. Las inversiones de capital no se restan (son aportes por socio, US-31).
+  - Criterio: cada línea de venta tiene dos costos: **valor de compra** (cantidad × costo promedio del artículo, sugerido y editable; columna `productionCost`) y **costo de producción** (estimado manual de tinta, luz, papel, tape…; columna `extraCost`). Como el consumo de insumos ya va en ese estimado, las salidas por consumo bajan stock pero no se restan otra vez en Ganancias.
   - Criterio: el costo de producción de cada línea de venta se llena solo con cantidad × costo promedio ponderado de compra del artículo; es editable y queda fijo en la venta. En pedidos públicos se calcula en el servidor.
   - Bug corregido: el costo se escribía a mano y por defecto era 0, así que se repartía la venta completa entre los socios. Las ventas viejas con costo 0 se recalculan con `npm run db:recalc-costs` (prueba) y `-- --apply` (guardar).
 - **US-35** ✅ Como `ADMIN`/`SECRETARY`/`ACCOUNTANT`, quiero seleccionar el año a consultar, limitado a años con ventas reales registradas.
