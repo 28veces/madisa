@@ -133,3 +133,39 @@ export async function getSale(id: string) {
   if (!sale || sale.businessId !== businessId) throw new Error("Sin permiso");
   return sale;
 }
+
+const saleItemCostsSchema = z.array(
+  z.object({ id: z.string().min(1), productionCost: z.coerce.number().min(0) })
+);
+
+// Permite ajustar el costo de producción después de creada la venta
+// (p. ej. pedidos del catálogo público, o personalizaciones con costo extra).
+export async function updateSaleItemCosts(
+  saleId: string,
+  data: z.infer<typeof saleItemCostsSchema>
+) {
+  const { businessId } = await requireBusiness([UserRole.ADMIN, UserRole.SECRETARY]);
+  const parsed = saleItemCostsSchema.safeParse(data);
+  if (!parsed.success) return { error: "Costos inválidos" };
+
+  const sale = await prisma.sale.findUnique({
+    where: { id: saleId },
+    select: { businessId: true, items: { select: { id: true } } },
+  });
+  if (!sale || sale.businessId !== businessId) return { error: "Sin permiso" };
+
+  const saleItemIds = new Set(sale.items.map((i) => i.id));
+  if (parsed.data.some((i) => !saleItemIds.has(i.id))) return { error: "Artículo no pertenece a la venta" };
+
+  await prisma.$transaction(
+    parsed.data.map((i) =>
+      prisma.saleItem.update({ where: { id: i.id }, data: { productionCost: i.productionCost } })
+    )
+  );
+
+  revalidatePath(`/admin/ventas/${saleId}`);
+  revalidatePath("/admin/ventas");
+  revalidatePath("/admin/ganancias");
+  revalidatePath("/admin");
+  return { success: true };
+}

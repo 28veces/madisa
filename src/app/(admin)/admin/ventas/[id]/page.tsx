@@ -1,12 +1,15 @@
 export const dynamic = "force-dynamic";
 
 import { getSale } from "@/actions/sales";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { ArrowLeft, Download } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { UserRole } from "@prisma/client";
+import { requireBusiness } from "@/lib/require-auth";
+import SaleItemsEditor from "./SaleItemsEditor";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   PENDING: { label: "Pendiente", color: "bg-yellow-100 text-yellow-700" },
@@ -29,6 +32,7 @@ interface Props {
 export default async function SaleDetailPage({ params }: Props) {
   const { id } = await params;
 
+  const { role } = await requireBusiness();
   const sale = await getSale(id).catch(() => null);
 
   if (!sale) {
@@ -46,10 +50,6 @@ export default async function SaleDetailPage({ params }: Props) {
   }
 
   const statusInfo = statusLabels[sale.status] || statusLabels.PENDING;
-  const totalGanancia = sale.items.reduce(
-    (sum, item) => sum + (item.quantity * item.unitPrice - item.productionCost),
-    0
-  );
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
@@ -104,80 +104,19 @@ export default async function SaleDetailPage({ params }: Props) {
         </CardContent>
       </Card>
 
-      {/* Items */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Artículos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-2 font-medium text-gray-600">Producto</th>
-                  <th className="text-right py-2 px-2 font-medium text-gray-600">Cantidad</th>
-                  <th className="text-right py-2 px-2 font-medium text-gray-600">Precio Unit.</th>
-                  <th className="text-right py-2 px-2 font-medium text-gray-600">Costo Prod.</th>
-                  <th className="text-right py-2 px-2 font-medium text-gray-600">Subtotal</th>
-                  <th className="text-right py-2 px-2 font-medium text-gray-600">Ganancia</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {sale.items.map((item) => {
-                  const subtotal = item.quantity * item.unitPrice;
-                  const ganancia = subtotal - item.productionCost;
-                  return (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="py-3 px-2">
-                        <div>
-                          <p className="font-medium text-gray-900">{item.inventoryItem.description}</p>
-                          {item.customization && (
-                            <p className="text-xs text-gray-500">Personalización: {item.customization}</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="text-right py-3 px-2">{item.quantity}</td>
-                      <td className="text-right py-3 px-2">{formatCurrency(Number(item.unitPrice))}</td>
-                      <td className="text-right py-3 px-2">{formatCurrency(Number(item.productionCost))}</td>
-                      <td className="text-right py-3 px-2 font-medium">{formatCurrency(subtotal)}</td>
-                      <td className={`text-right py-3 px-2 font-medium ${ganancia >= 0 ? "text-green-600" : "text-red-600"}`}>
-                        {formatCurrency(ganancia)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Resumen financiero */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Resumen Financiero</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-gray-600">Total de venta:</span>
-              <span className="font-semibold text-gray-900">{formatCurrency(Number(sale.totalAmount))}</span>
-            </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <span className="text-gray-600">Costo producción:</span>
-              <span className="font-semibold text-gray-900">
-                {formatCurrency(sale.items.reduce((sum, item) => sum + item.productionCost, 0))}
-              </span>
-            </div>
-            <div className="flex justify-between items-center py-3 bg-green-50 px-3 rounded-lg">
-              <span className="font-semibold text-gray-900">Ganancia neta:</span>
-              <span className={`text-lg font-bold ${totalGanancia >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {formatCurrency(totalGanancia)}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <SaleItemsEditor
+        saleId={sale.id}
+        totalAmount={Number(sale.totalAmount)}
+        canEdit={role === UserRole.ADMIN || role === UserRole.SECRETARY}
+        items={sale.items.map((item) => ({
+          id: item.id,
+          description: item.inventoryItem.description,
+          customization: item.customization,
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPrice),
+          productionCost: Number(item.productionCost),
+        }))}
+      />
     </div>
   );
 }

@@ -71,6 +71,7 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 - **US-22** ✅ Como `ADMIN`, quiero eliminar una venta.
 - **US-23** ✅ Como `ADMIN`/`SECRETARY`/`ACCOUNTANT`, quiero ver el detalle de una venta con ganancia por artículo (precio − costo de producción).
   `src/app/(admin)/admin/ventas/[id]/page.tsx` (usa `getSale`, valida `businessId`)
+  - Criterio (2026-09-22): `ADMIN`/`SECRETARY` pueden ajustar el costo de producción de cada línea desde el detalle, con la ganancia recalculada al momento (`updateSaleItemCosts`). Necesario para pedidos del catálogo público, que llegan con el costo promedio sugerido, y para personalizaciones con costo extra. `ACCOUNTANT` solo lo ve.
 - **US-24** ⬜ Como `ADMIN`, quiero filtrar/buscar ventas por cliente, rango de fechas o estado en el listado (hoy `getSales` no acepta filtros).
 
 ## Épico F — Compras y proveedores
