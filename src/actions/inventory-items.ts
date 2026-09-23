@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PurchaseCategory, UserRole } from "@prisma/client";
 import { saveUploadedImage } from "@/lib/upload";
+import { stockInclude, stockTotals, availableStock } from "@/lib/stock";
 
 const inventoryItemSchema = z.object({
   description: z.string().min(1, "Descripción requerida"),
@@ -178,10 +179,7 @@ export async function getInventoryItemsForSale() {
       businessId,
       isActive: true,
     },
-    include: {
-      purchaseItems: { select: { quantity: true } },
-      saleItems: { select: { quantity: true } },
-    },
+    include: stockInclude,
     orderBy: { code: "asc" },
   });
 
@@ -190,9 +188,7 @@ export async function getInventoryItemsForSale() {
     code: item.code,
     description: item.description,
     category: item.category as string,
-    availableStock:
-      item.purchaseItems.reduce((s, i) => s + i.quantity, 0) -
-      item.saleItems.reduce((s, i) => s + i.quantity, 0),
+    availableStock: availableStock(item),
   }));
 }
 
@@ -202,23 +198,24 @@ export async function getInventoryItemsWithPurchaseQty() {
     where: { businessId },
     include: {
       suppliers: { include: { supplier: true } },
-      purchaseItems: { select: { quantity: true } },
-      saleItems: { select: { quantity: true } },
+      ...stockInclude,
     },
     orderBy: { code: "asc" },
   });
 
-  return items.map((item) => ({
-    id: item.id,
-    code: item.code,
-    description: item.description,
-    category: item.category,
-    note: item.note,
-    isActive: item.isActive,
-    totalQuantityPurchased: item.purchaseItems.reduce((sum, pi) => sum + pi.quantity, 0),
-    totalQuantitySold: item.saleItems.reduce((sum, si) => sum + si.quantity, 0),
-    availableStock:
-      item.purchaseItems.reduce((sum, pi) => sum + pi.quantity, 0) -
-      item.saleItems.reduce((sum, si) => sum + si.quantity, 0),
-  }));
+  return items.map((item) => {
+    const totals = stockTotals(item);
+    return {
+      id: item.id,
+      code: item.code,
+      description: item.description,
+      category: item.category,
+      note: item.note,
+      isActive: item.isActive,
+      totalQuantityPurchased: totals.purchased,
+      totalQuantitySold: totals.sold,
+      totalQuantityAdjusted: totals.adjusted,
+      availableStock: totals.available,
+    };
+  });
 }

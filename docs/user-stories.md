@@ -54,6 +54,13 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 - **US-18** ✅ Como `ADMIN`/`SECRETARY`/`ACCOUNTANT`, quiero ver la disponibilidad de cada artículo (suma de compras − suma de ventas), sin campo de stock manual que se pueda desincronizar.
   `src/actions/inventory-items.ts:getInventoryItemsWithPurchaseQty`
 - **US-19** ✅ Como `ADMIN`, quiero eliminar artículos de inventario que ya no se usan.
+- **US-49** ✅ Como `ADMIN`/`SECRETARY`, quiero registrar salidas de inventario que no son ventas (consumo de insumos en producción, mermas/daños, ajustes por conteo físico) para que el stock refleje lo que realmente queda.
+  `src/actions/inventory-adjustments.ts`, `src/lib/stock.ts`, `src/app/(admin)/admin/salidas/`
+  - Criterio: aplica a cualquier artículo, no solo insumos. Se registra artículo, cantidad (entera, en la unidad de compra: paquete, botella…), fecha, motivo y nota opcional.
+  - Criterio: la disponibilidad pasa a ser compras − ventas − salidas en todo el sistema (Inventario, catálogo admin y público, ventas, pedidos públicos). No se puede sacar más de lo disponible.
+  - Criterio: la salida no cuenta como egreso (el costo ya se registró en la compra).
+  - Criterio: `ADMIN` puede eliminar una salida (el stock se repone); `ACCOUNTANT` solo la ve.
+  - Futuro: descuento automático de insumos por receta de producto al vender (requiere recetas y cantidades fraccionarias).
 
 ## Épico E — Ventas
 

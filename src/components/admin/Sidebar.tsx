@@ -19,6 +19,7 @@ import {
   Users,
   Store,
   UserCircle,
+  PackageMinus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "next-auth/react";
@@ -32,6 +33,7 @@ const navItems = [
   { href: "/admin/articulos", label: "Artículos de Compra", icon: Box },
   { href: "/admin/ventas", label: "Ventas", icon: ShoppingBag },
   { href: "/admin/compras", label: "Compras", icon: TrendingDown },
+  { href: "/admin/salidas", label: "Salidas de inventario", icon: PackageMinus },
   { href: "/admin/socios", label: "Socios", icon: Users },
   { href: "/admin/inversiones", label: "Inversiones", icon: Zap },
   { href: "/admin/egresos", label: "Egresos", icon: DollarSign },

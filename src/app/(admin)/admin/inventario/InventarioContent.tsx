@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Plus, Search, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
+import { Plus, Search, ChevronLeft, ChevronRight, Pencil, PackageMinus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ interface InventoryItem {
   isActive: boolean;
   totalQuantityPurchased: number;
   totalQuantitySold: number;
+  totalQuantityAdjusted: number;
   availableStock: number;
 }
 
@@ -129,6 +130,7 @@ export default function InventarioContent({ items }: Props) {
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Categoría</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Comprado</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Vendido</th>
+                <th className="text-right py-3 px-4 font-medium text-gray-600">Salidas</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Stock</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Nota</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Acciones</th>
@@ -137,7 +139,7 @@ export default function InventarioContent({ items }: Props) {
             <tbody className="divide-y divide-gray-50">
               {paginated.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-gray-400">
+                  <td colSpan={9} className="text-center py-10 text-gray-400">
                     No hay artículos. <Link href="/admin/articulos/nuevo" className="text-rose-600 hover:underline">Crear primero.</Link>
                   </td>
                 </tr>
@@ -161,6 +163,9 @@ export default function InventarioContent({ items }: Props) {
                   <td className="py-3 px-4 text-right text-gray-600">
                     {item.totalQuantitySold}
                   </td>
+                  <td className="py-3 px-4 text-right text-gray-600">
+                    {item.totalQuantityAdjusted}
+                  </td>
                   <td className="py-3 px-4 text-right font-semibold">
                     <span className={item.availableStock <= 0 ? "text-red-600" : item.availableStock <= 3 ? "text-amber-600" : "text-gray-900"}>
                       {item.availableStock}
@@ -171,6 +176,13 @@ export default function InventarioContent({ items }: Props) {
                   </td>
                   <td className="py-3 px-4 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      {item.availableStock > 0 && (
+                        <Link href={`/admin/salidas/nueva?articulo=${item.id}`} title="Registrar salida">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gray-700">
+                            <PackageMinus className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                      )}
                       <Link href={`/admin/articulos/${item.id}`}>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gray-700">
                           <Pencil className="h-4 w-4" />

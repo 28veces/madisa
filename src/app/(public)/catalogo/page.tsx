@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { Suspense } from "react";
 import { getPublicProducts } from "@/actions/products";
+import { availableStock } from "@/lib/stock";
 import { Category } from "@prisma/client";
 import ProductCard from "@/components/public/ProductCard";
 import CategoryFilter from "@/components/public/CategoryFilter";
@@ -42,8 +43,7 @@ async function ProductGrid({ category }: { category?: string }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {products.map((p) => {
         const stock = p.inventoryItem
-          ? p.inventoryItem.purchaseItems.reduce((s, i) => s + i.quantity, 0) -
-            p.inventoryItem.saleItems.reduce((s, i) => s + i.quantity, 0)
+          ? availableStock(p.inventoryItem)
           : undefined;
         return (
           <ProductCard

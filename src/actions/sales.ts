@@ -5,6 +5,7 @@ import { requireBusiness } from "@/lib/require-auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SaleStatus, UserRole, BusinessLine } from "@prisma/client";
+import { stockInclude, availableStock } from "@/lib/stock";
 
 const saleItemSchema = z.object({
   inventoryItemId: z.string().min(1),
@@ -35,17 +36,12 @@ export async function createSale(data: z.infer<typeof saleSchema>) {
       for (const item of parsed.data.items) {
         const invItem = await tx.inventoryItem.findUnique({
           where: { id: item.inventoryItemId },
-          include: {
-            purchaseItems: { select: { quantity: true } },
-            saleItems: { select: { quantity: true } },
-          },
+          include: stockInclude,
         });
 
         if (!invItem || invItem.businessId !== businessId) throw new Error("Artículo no encontrado");
 
-        const totalPurchased = invItem.purchaseItems.reduce((s, i) => s + i.quantity, 0);
-        const totalSold = invItem.saleItems.reduce((s, i) => s + i.quantity, 0);
-        const available = totalPurchased - totalSold;
+        const available = availableStock(invItem);
 
         if (available < item.quantity) {
           throw new Error(

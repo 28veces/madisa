@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { getPublicProduct } from "@/actions/products";
+import { availableStock } from "@/lib/stock";
 import { useCartStore } from "@/stores/cartStore";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -103,9 +104,7 @@ export default async function ProductDetailPage({ params }: Props) {
               </div>
             )}
             {product.inventoryItem && (() => {
-              const bought = product.inventoryItem.purchaseItems?.reduce((s: number, i: {quantity: number}) => s + i.quantity, 0) ?? 0;
-              const sold = product.inventoryItem.saleItems?.reduce((s: number, i: {quantity: number}) => s + i.quantity, 0) ?? 0;
-              const stock = bought - sold;
+              const stock = availableStock(product.inventoryItem);
               return (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Disponibilidad:</span>
@@ -128,8 +127,7 @@ export default async function ProductDetailPage({ params }: Props) {
               material={product.material || ""}
               availableStock={
                 product.inventoryItem
-                  ? product.inventoryItem.purchaseItems.reduce((s, i) => s + i.quantity, 0) -
-                    product.inventoryItem.saleItems.reduce((s, i) => s + i.quantity, 0)
+                  ? availableStock(product.inventoryItem)
                   : undefined
               }
             />

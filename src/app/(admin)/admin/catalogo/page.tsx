@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { Plus, Pencil } from "lucide-react";
 import { getProducts } from "@/actions/products";
+import { availableStock } from "@/lib/stock";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import DeleteProductButton from "./DeleteProductButton";
@@ -71,9 +72,7 @@ export default async function CatalogoAdminPage() {
                   <td className="py-3 px-4 text-center text-gray-600">
                     {p.inventoryItem
                       ? (() => {
-                          const bought = p.inventoryItem.purchaseItems.reduce((s: number, i: {quantity: number}) => s + i.quantity, 0);
-                          const sold = p.inventoryItem.saleItems.reduce((s: number, i: {quantity: number}) => s + i.quantity, 0);
-                          const stock = bought - sold;
+                          const stock = availableStock(p.inventoryItem);
                           return <span className={stock <= 0 ? "text-red-500 font-medium" : ""}>{stock}</span>;
                         })()
                       : <span className="text-gray-400 text-xs">sin vincular</span>

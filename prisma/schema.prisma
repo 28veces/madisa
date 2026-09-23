@@ -21,21 +21,22 @@ model User {
 }
 
 model Business {
-  id             String       @id @default(cuid())
-  name           String
-  slug           String       @unique
-  isActive       Boolean      @default(true)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  users          User[]
-  products       Product[]
-  sales          Sale[]
-  purchases      Purchase[]
-  suppliers      Supplier[]
-  inventoryItems InventoryItem[]
-  partners       Partner[]
-  investments    Investment[]
-  expenses       Expense[]
+  id                   String                @id @default(cuid())
+  name                 String
+  slug                 String                @unique
+  isActive             Boolean               @default(true)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  users                User[]
+  products             Product[]
+  sales                Sale[]
+  purchases            Purchase[]
+  suppliers            Supplier[]
+  inventoryItems       InventoryItem[]
+  partners             Partner[]
+  investments          Investment[]
+  expenses             Expense[]
+  inventoryAdjustments InventoryAdjustment[]
 }
 
 model Product {
@@ -149,6 +150,7 @@ model InventoryItem {
   suppliers     InventoryItemSupplier[]
   purchaseItems PurchaseItem[]
   saleItems     SaleItem[]
+  adjustments   InventoryAdjustment[]
   products      Product[]
 
   @@index([businessId])
@@ -163,6 +165,25 @@ model InventoryItemSupplier {
   supplier        Supplier      @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
   @@unique([inventoryItemId, supplierId])
+}
+
+// Salida de inventario que no es venta: consumo de insumos, mermas o ajustes por conteo.
+// El stock disponible es compras − ventas − salidas.
+model InventoryAdjustment {
+  id              String           @id @default(cuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem    @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  quantity        Int
+  reason          AdjustmentReason
+  date            DateTime
+  note            String?
+  createdById     String?
+  businessId      String
+  business        Business         @relation(fields: [businessId], references: [id])
+  createdAt       DateTime         @default(now())
+
+  @@index([businessId])
+  @@index([inventoryItemId])
 }
 
 model Purchase {
@@ -270,17 +291,23 @@ model Investment {
 }
 
 model Expense {
-  id         String   @id @default(cuid())
+  id          String   @id @default(cuid())
   description String
-  amount     Float
-  category   String
+  amount      Float
+  category    String
   isRecurring Boolean  @default(false)
   expenseDate DateTime
-  notes      String?
-  businessId String
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  notes       String?
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([businessId])
+}
+
+enum AdjustmentReason {
+  CONSUMPTION
+  DAMAGE
+  COUNT_ADJUSTMENT
 }

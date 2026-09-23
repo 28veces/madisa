@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { getAvailableStock } from "@/lib/stock";
 
 export interface PublicOrderData {
   clientName: string;
@@ -38,15 +39,7 @@ export async function createPublicOrder(data: PublicOrderData) {
 
           // Si el producto tiene inventario vinculado, verificar stock
           if (product.inventoryItemId) {
-            const purchased = await tx.purchaseItem.aggregate({
-              where: { inventoryItemId: product.inventoryItemId },
-              _sum: { quantity: true },
-            });
-            const sold = await tx.saleItem.aggregate({
-              where: { inventoryItemId: product.inventoryItemId },
-              _sum: { quantity: true },
-            });
-            const available = (purchased._sum.quantity ?? 0) - (sold._sum.quantity ?? 0);
+            const available = await getAvailableStock(tx, product.inventoryItemId);
 
             if (available < item.quantity) {
               throw new Error(

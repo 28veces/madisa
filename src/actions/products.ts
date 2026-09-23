@@ -7,6 +7,7 @@ import { z } from "zod";
 import { Category, Technique, UserRole } from "@prisma/client";
 import { saveUploadedImage } from "@/lib/upload";
 import { randomUUID } from "crypto";
+import { stockInclude, availableStock } from "@/lib/stock";
 
 const productSchema = z.object({
   name: z.string().min(1, "Nombre requerido"),
@@ -124,10 +125,7 @@ export async function getProducts(category?: Category, activeOnly = false) {
     },
     include: {
       inventoryItem: {
-        include: {
-          purchaseItems: { select: { quantity: true } },
-          saleItems: { select: { quantity: true } },
-        },
+        include: stockInclude,
       },
     },
     orderBy: { createdAt: "desc" },
@@ -146,10 +144,7 @@ export async function getPublicProducts(category?: Category) {
     },
     include: {
       inventoryItem: {
-        include: {
-          purchaseItems: { select: { quantity: true } },
-          saleItems: { select: { quantity: true } },
-        },
+        include: stockInclude,
       },
     },
     orderBy: { createdAt: "desc" },
@@ -157,9 +152,7 @@ export async function getPublicProducts(category?: Category) {
 
   return products.filter((p) => {
     if (!p.inventoryItemId) return true; // arreglos u otros sin inventario
-    const purchased = p.inventoryItem!.purchaseItems.reduce((s, i) => s + i.quantity, 0);
-    const sold = p.inventoryItem!.saleItems.reduce((s, i) => s + i.quantity, 0);
-    return purchased - sold > 0;
+    return availableStock(p.inventoryItem!) > 0;
   });
 }
 
@@ -185,10 +178,7 @@ export async function getPublicProduct(id: string) {
     where: { id, isActive: true, businessId },
     include: {
       inventoryItem: {
-        include: {
-          purchaseItems: { select: { quantity: true } },
-          saleItems: { select: { quantity: true } },
-        },
+        include: stockInclude,
       },
     },
   });
