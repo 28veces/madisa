@@ -1,0 +1,29 @@
+{
+  "extraKnownMarketplaces": {
+    "metodo28veces": {
+      "source": {
+        "source": "github",
+        "repo": "28veces/metodo28veces"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "metodo28veces@metodo28veces": true,
+    "stack-nextjs-multitenant@metodo28veces": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(npm run lint)",
+      "Bash(npm run build)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.production)"
+    ]
+  }
+}

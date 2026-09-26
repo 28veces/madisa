@@ -147,8 +147,30 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 - **US-47** ✅ Limpiar archivos de desarrollo sueltos en la raíz del repo (`dev.log`, `test_login_*.sh`, `2024 madisa.xlsx`, `query-users.ts`, `verify-login.ts`) antes de un despliegue serio. _(Hecho 2026-09-21: eliminados del repo con git rm.)_
 - **US-48** ✅ Reemplazar `saveUploadedImage` (escribe a `public/uploads/` en disco local) por almacenamiento externo (S3/Cloudinary/Vercel Blob) antes de desplegar en un entorno serverless con filesystem efímero. _(Hecho 2026-09-21: schema en PostgreSQL con migración `init_postgres`; `saveUploadedImage` usa Vercel Blob si existe `BLOB_READ_WRITE_TOKEN`, disco local si no.)_
   `src/lib/upload.ts`
+- **US-50** ⬜ Como equipo, queremos que `npm run lint` termine sin errores para poder exigirlo en la definición de terminado.
+  - Criterio: `npm run lint` termina sin errores (hoy hay 9, casi todos `no-explicit-any` en `src/lib/auth.ts`, `src/components/admin/UserManagementForm.tsx` y otros).
+  - Criterio: los `any` se reemplazan por tipos reales; no se desactiva la regla ni se agregan `eslint-disable`.
+  - Criterio: al cerrarla, se quita de `AGENTS.md` la excepción "no agregar errores nuevos" y el lint pasa a ser obligatorio.
+- **US-51** ⬜ Como integrante nuevo del equipo, quiero que `README.md`, `SETUP.md` y `.env.example` describan el arranque real (PostgreSQL con Docker y migraciones) para levantar el proyecto sin ayuda.
+  - Criterio: `README.md` y `SETUP.md` dejan de mencionar SQLite, `dev.db` y `db:push` como flujo principal, y explican `docker compose up -d` + `npm run db:migrate` + `npm run db:seed`.
+  - Criterio: `.env.example` queda versionado (hoy lo excluye el patrón `.env*` de `.gitignore`), con valores de ejemplo falsos.
+  - Criterio: las credenciales de los usuarios del seed figuran como "solo para desarrollo".
+
+## Épico M — Seguridad
+
+- **US-52** ⬜ Como dueño del negocio, quiero que los pedidos del sitio público usen los precios del catálogo y no los que envía el navegador, para que nadie pueda crear un pedido con precios alterados.
+  - Criterio: `createPublicOrder` ignora `unitPrice` y `totalAmount` del cliente: toma el precio de cada producto de la base y calcula el total en el servidor.
+  - Criterio: un pedido enviado con precios modificados queda guardado con los precios reales del catálogo.
+  - Criterio: el carrito sigue mostrando el mismo total que se guarda.
+  `src/actions/public-orders.ts:createPublicOrder`
+- **US-53** ⬜ Como sistema, `createPublicOrder` debe validar su entrada con Zod y resolver el negocio con `getActiveBusinessId()`, como exigen las reglas duras.
+  - Criterio: se rechazan cantidades menores o iguales a cero, no enteras o excesivas, listas de ítems vacías, `businessLine` fuera del enum, y nombre o teléfono vacíos o demasiado largos, con un mensaje claro.
+  - Criterio: el negocio activo se obtiene con `getActiveBusinessId()`; se elimina la query propia.
+  - Criterio: el mensaje de error que ve el visitante no expone detalles internos (ids, errores de Prisma).
+  `src/actions/public-orders.ts:createPublicOrder`
 
 ---
 
 ### Cómo agregar historias nuevas
-Dime la idea en lenguaje natural ("quiero que al completar una venta se descuente X") y yo la convierto en una historia con ID correlativo dentro del épico correspondiente, o la agrego a un épico nuevo si no encaja. Si me das un ID existente, interpreto que es una modificación/extensión de esa historia, no una nueva.
+
+Con Claude Code: `/metodo28veces:nueva-historia <idea en lenguaje natural>` (ej. "quiero que al completar una venta se descuente X"). La historia se agrega al final de su épico con el siguiente ID libre de todo el backlog; si no encaja en ningún épico, se crea uno nuevo. Si das un ID existente, se interpreta como ampliación de esa historia y se agrega un criterio con fecha. Para implementarla: `/metodo28veces:implementar-historia US-NN`.
