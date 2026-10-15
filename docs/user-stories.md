@@ -93,10 +93,12 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio (2026-10-14): la descripción de la compra la arma el servidor con los artículos (ej. "Plato ×4, Taza ×2"); la lista muestra hasta 3 artículos con su cantidad y "+N más". La sugerencia de proveedor se hace una sola vez: si el usuario lo cambia o lo quita, no se vuelve a llenar.
   - Bug corregido (2026-10-14): toda compra se guardaba como "Compra de materiales" y sin proveedor, porque el formulario mandaba ese texto fijo y el proveedor siempre vacío.
 - **US-26** ✅ Como `ADMIN`/`SECRETARY`, quiero editar una compra existente.
-- **US-27** 🟡 Como `ADMIN`, quiero eliminar una compra.
+- **US-27** ✅ Como `ADMIN`, quiero eliminar una compra.
+  `src/actions/purchases.ts:deletePurchase`, `src/app/(admin)/admin/compras/DeletePurchaseButton.tsx`
   - Criterio (2026-10-14): el listado o la pantalla de edición tiene un botón "Eliminar" visible solo para `ADMIN` (la action `deletePurchase` existe pero no hay botón en la interfaz).
   - Criterio (2026-10-14): pide confirmación antes de borrar y, al eliminar, el stock de los artículos baja en Inventario y catálogo.
   - Criterio (2026-10-14): si eliminarla deja stock negativo (lo comprado ya se vendió o se sacó), no se elimina y se muestra un mensaje claro.
+  - Bug corregido (2026-10-14): la action `deletePurchase` existía pero no había botón; además borraba sin revisar el stock. Ahora borra y revisa dentro de una transacción, que se revierte si algún artículo quedaría en negativo.
 - **US-28** ✅ Como `ADMIN`/`SECRETARY`, quiero gestionar proveedores (crear, editar, listar, activar/desactivar).
   `src/actions/suppliers.ts`
 

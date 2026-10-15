@@ -5,6 +5,7 @@ import { requireBusiness } from "@/lib/require-auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PurchaseCategory, UserRole } from "@prisma/client";
+import { getAvailableStock } from "@/lib/stock";
 
 const purchaseItemSchema = z.object({
   inventoryItemId: z.string().min(1),
@@ -101,10 +102,35 @@ export async function createPurchase(data: z.infer<typeof purchaseSchema>) {
 
 export async function deletePurchase(id: string) {
   const { businessId } = await requireBusiness([UserRole.ADMIN]);
-  const purchase = await prisma.purchase.findUnique({ where: { id } });
-  if (!purchase || purchase.businessId !== businessId) throw new Error("Sin permiso");
+  const parsedId = z.string().min(1).safeParse(id);
+  if (!parsedId.success) return { error: "Compra no encontrada" };
 
-  await prisma.purchase.delete({ where: { id } });
+  try {
+    await prisma.$transaction(async (tx) => {
+      const purchase = await tx.purchase.findFirst({
+        where: { id: parsedId.data, businessId },
+        include: { items: { include: { inventoryItem: { select: { description: true } } } } },
+      });
+      if (!purchase) throw new Error("Compra no encontrada");
+
+      await tx.purchase.delete({ where: { id: purchase.id } });
+
+      // Si lo comprado ya se vendió o se sacó, borrar la compra dejaría stock negativo
+      for (const item of purchase.items) {
+        if (!item.inventoryItemId) continue;
+        const available = await getAvailableStock(tx, item.inventoryItemId);
+        if (available < 0) {
+          const name = item.inventoryItem?.description ?? item.description;
+          throw new Error(
+            `No se puede eliminar: de ${name} ya se vendieron o sacaron unidades de esta compra (el stock quedaría en ${available})`
+          );
+        }
+      }
+    });
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Error al eliminar la compra" };
+  }
+
   revalidateStock();
   return { success: true };
 }

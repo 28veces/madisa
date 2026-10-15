@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import DeletePurchaseButton from "./DeletePurchaseButton";
 
 interface Purchase {
   id: string;
@@ -22,6 +23,7 @@ interface Purchase {
 interface Props {
   purchases: Purchase[];
   totalGastado: number;
+  canDelete: boolean;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -35,7 +37,7 @@ const PAGE_SIZE = 10;
 // Líneas de artículos que se muestran por compra antes de resumir con "+N más"
 const MAX_ITEMS_SHOWN = 3;
 
-export default function ComprasContent({ purchases, totalGastado }: Props) {
+export default function ComprasContent({ purchases, totalGastado, canDelete }: Props) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
@@ -149,11 +151,19 @@ export default function ComprasContent({ purchases, totalGastado }: Props) {
                     {formatDate(p.purchaseDate)}
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <Link href={`/admin/compras/${p.id}`}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link href={`/admin/compras/${p.id}`}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      {canDelete && (
+                        <DeletePurchaseButton
+                          id={p.id}
+                          label={p.items.length ? p.items.map((i) => i.description).join(", ") : p.description}
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
