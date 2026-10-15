@@ -205,11 +205,15 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio (2026-10-15): se usa `next@16.3.8` y no 16.4.2: según `npm audit`, la 16.3.8 ya corrige todos los avisos, y la 16.4.2 salió el mismo día de la historia. Con ella `sharp` resuelve a 0.35.5 (corregida). `npm audit --omit=dev` pasó de 30 vulnerabilidades (4 críticas) a 3 altas, todas de la CLI de Prisma (`@prisma/config`/`deepmerge-ts`), que solo corre en el build y se corrige con Prisma 7.
   - Bug corregido: la regla nueva `no-location-assign-relative-destination` de `eslint-config-next` 16.3.8 marcaba la redirección del carrito; ahora usa `router.push`.
   `package.json`, `package-lock.json`
-- **US-58** ⬜ Como `ADMIN`, quiero que al desactivar a un usuario o cambiar su rol pierda el acceso de inmediato, para que un empleado que se va no pueda seguir entrando con su sesión abierta (hallazgo A2).
+- **US-58** ✅ Como `ADMIN`, quiero que al desactivar a un usuario o cambiar su rol pierda el acceso de inmediato, para que un empleado que se va no pueda seguir entrando con su sesión abierta (hallazgo A2).
   - Criterio: un usuario desactivado con la sesión abierta recibe "No autenticado" en su siguiente acción y vuelve al login.
   - Criterio: si el super administrador desactiva un negocio, sus usuarios pierden el acceso en la siguiente acción.
   - Criterio: un cambio de rol se aplica en la siguiente acción sin volver a iniciar sesión.
   - Criterio: la sesión dura como máximo 7 días.
+  - Criterio (2026-10-15): la revalidación se hace en el callback `jwt` de Auth.js, que corre en cada lectura de la sesión (proxy, layouts y Server Actions): si devuelve `null` la sesión se invalida y el proxy manda al login. Cuesta una query por lectura de sesión.
+  - Criterio (2026-10-15): un usuario de un negocio inactivo no puede iniciar sesión (ve el mensaje genérico de credenciales incorrectas).
+  - Verificado con Playwright y cambios directos en la base: rol cambiado → la sesión toma el rol nuevo; usuario desactivado y negocio desactivado → `/admin/ventas` redirige a `/login`; cookie de 7 días.
+  `src/lib/auth.ts:jwt`, `src/lib/auth.ts:authorize`
 - **US-59** ⬜ Como dueño del negocio, quiero que el login bloquee los intentos repetidos, para que nadie pueda adivinar una contraseña probando muchas (hallazgos A3 y B5).
   - Criterio: tras 5 intentos fallidos para un mismo email en 15 minutos, ese email queda bloqueado 15 minutos, aunque luego se use la contraseña correcta.
   - Criterio: el mensaje es el mismo exista o no el email, para no revelar qué cuentas existen.

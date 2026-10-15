@@ -10,7 +10,7 @@ const loginSchema = z.object({
 });
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
   pages: {
     signIn: "/login",
   },
@@ -22,9 +22,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
-          select: { id: true, email: true, name: true, imageUrl: true, passwordHash: true, role: true, businessId: true },
+          select: {
+            id: true, email: true, name: true, imageUrl: true, passwordHash: true, role: true, businessId: true,
+            business: { select: { isActive: true } },
+          },
         });
-        if (!user) return null;
+        if (!user || (user.business && !user.business.isActive)) return null;
 
         const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!valid) return null;
@@ -34,12 +37,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
         token.businessId = ((user as any).businessId ?? null) as string | null;
         token.picture = (user as any).image ?? null;
+      } else if (token.id) {
+        // En cada lectura de la sesión se revalida contra la base: un usuario desactivado
+        // (passwordHash vacío) o de un negocio inactivo pierde el acceso de inmediato,
+        // y un cambio de rol se aplica sin volver a iniciar sesión.
+        const current = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { passwordHash: true, role: true, businessId: true, business: { select: { isActive: true } } },
+        });
+        if (!current || current.passwordHash === "" || (current.business && !current.business.isActive)) {
+          return null;
+        }
+        token.role = current.role;
+        token.businessId = current.businessId;
       }
       if (trigger === "update" && session?.image !== undefined) {
         token.picture = session.image;
