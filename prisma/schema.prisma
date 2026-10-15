@@ -37,6 +37,7 @@ model Business {
   investments          Investment[]
   expenses             Expense[]
   inventoryAdjustments InventoryAdjustment[]
+  recurringExpenses    RecurringExpense[]
 }
 
 model Product {
@@ -294,17 +295,48 @@ model Investment {
 }
 
 model Expense {
-  id          String   @id @default(cuid())
+  id                 String            @id @default(cuid())
+  description        String
+  amount             Float
+  category           String
+  isRecurring        Boolean           @default(false)
+  expenseDate        DateTime
+  notes              String?
+  businessId         String
+  business           Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  // Egreso fijo del que salió este pago, si se registró al confirmarlo
+  recurringExpenseId String?
+  recurringExpense   RecurringExpense? @relation(fields: [recurringExpenseId], references: [id], onDelete: SetNull)
+
+  @@index([businessId])
+  @@index([recurringExpenseId])
+}
+
+enum RecurrenceFrequency {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+}
+
+// Egreso que se repite (alquiler, fumigación cada 3 meses, permiso anual...).
+// No genera egresos solo: cuando llega nextDueDate, la app avisa y el ADMIN confirma el pago.
+model RecurringExpense {
+  id          String              @id @default(cuid())
   description String
-  amount      Float
   category    String
-  isRecurring Boolean  @default(false)
-  expenseDate DateTime
+  amount      Float
+  frequency   RecurrenceFrequency
+  nextDueDate DateTime
+  isActive    Boolean             @default(true)
   notes       String?
   businessId  String
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  business    Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  payments    Expense[]
 
   @@index([businessId])
 }

@@ -104,12 +104,14 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 
 ## Épico G — Egresos e inversiones
 
-- **US-29** 🟡 Como `ADMIN`, quiero registrar egresos operativos (con opción de marcarlos recurrentes) fuera del flujo de compras/inventario.
-  `src/actions/expenses.ts`
+- **US-29** ✅ Como `ADMIN`, quiero registrar egresos operativos (con opción de marcarlos recurrentes) fuera del flujo de compras/inventario.
+  `src/actions/expenses.ts`, `src/actions/recurring-expenses.ts:confirmRecurringPayment`, `src/lib/recurrence.ts:advanceDueDate`, `src/app/(admin)/admin/egresos/RecurringExpensesSection.tsx`, `src/components/admin/RecurringExpenseForm.tsx`
   - Criterio (2026-10-14): un egreso fijo se define con descripción, categoría, monto estimado, frecuencia (mensual, cada 3 meses, cada 6 meses, anual) y fecha del próximo pago. Ej.: fumigación cada 3 meses, permiso anual de propaganda.
   - Criterio (2026-10-14): cuando llega la fecha, la app avisa en Egresos (y en el dashboard) que el egreso está pendiente; no lo registra sola.
   - Criterio (2026-10-14): al confirmar el pago se crea el egreso con el monto (editable) y la fecha reales, y la fecha del próximo pago avanza según la frecuencia. También se puede omitir esa vez, sin crear egreso.
   - Criterio (2026-10-14): un egreso fijo se puede editar y desactivar. Los egresos ya marcados como "Recurrente" siguen viéndose igual (la migración no borra datos).
+  - Criterio (2026-10-14): solo `ADMIN` crea, edita, confirma y omite; `ACCOUNTANT` los ve. "Hoy" se calcula en hora de Panamá. Si el día no existe en el mes siguiente (31 → febrero), se usa el último día del mes, y desde ahí sigue ese día (31 ene → 28 feb → 28 mar). Confirmar u omitir solo vale para el periodo que se ve en pantalla: un segundo envío (otra pestaña) se rechaza en vez de duplicar el pago o adelantar un periodo. El pago confirmado es un egreso normal, así que cuenta en Ganancias y el Dashboard.
+  - Migración `recurring_expenses`: solo agrega (enum, tabla `RecurringExpense` y columna opcional `Expense.recurringExpenseId`); no modifica datos existentes.
 - **US-30** ✅ Como `ADMIN`, quiero registrar inversiones de capital (maquinaria, mejoras de local, equipo) categorizadas.
   `src/actions/investments.ts`
 - **US-31** ✅ Como `ADMIN`, quiero repartir el monto de una inversión entre socios según su aporte real (contribuciones individuales).

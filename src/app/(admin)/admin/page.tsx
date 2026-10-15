@@ -6,7 +6,9 @@ import MetricCard from "@/components/admin/MetricCard";
 import SalesChart from "@/components/admin/SalesChart";
 import BusinessLineChart from "@/components/admin/BusinessLineChart";
 import YearlySummaryChart from "@/components/admin/YearlySummaryChart";
-import { DollarSign, ShoppingBag, TrendingDown, Package, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { DollarSign, ShoppingBag, TrendingDown, Package, AlertTriangle, CalendarClock } from "lucide-react";
+import { countDueRecurringExpenses } from "@/actions/recurring-expenses";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -182,7 +184,10 @@ const emptyData = {
 
 export default async function DashboardPage() {
   const { businessId } = await requireBusiness();
-  const data = await getDashboardData(businessId).catch(() => emptyData);
+  const [data, dueRecurring] = await Promise.all([
+    getDashboardData(businessId).catch(() => emptyData),
+    countDueRecurringExpenses().catch(() => 0),
+  ]);
   const salesAmount = Number(data.salesThisMonth._sum.totalAmount ?? 0);
   const purchasesAmount = Number(data.purchasesThisMonth._sum.totalAmount ?? 0);
   const expensesAmount = Number(data.expensesThisMonth._sum.amount ?? 0);
@@ -196,6 +201,21 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-500 text-sm mt-1">Resumen del negocio este mes</p>
       </div>
+
+      {dueRecurring > 0 && (
+        <Link
+          href="/admin/egresos"
+          className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 hover:bg-amber-100 transition-colors"
+        >
+          <CalendarClock className="h-5 w-5 flex-shrink-0" />
+          <span>
+            {dueRecurring === 1
+              ? "Hay 1 egreso fijo que toca pagar."
+              : `Hay ${dueRecurring} egresos fijos que toca pagar.`}{" "}
+            <span className="font-semibold underline">Revisar en Egresos</span>
+          </span>
+        </Link>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <MetricCard

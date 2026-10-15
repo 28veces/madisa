@@ -22,11 +22,13 @@ interface Props {
   expenses: Expense[];
   totalExpenses: number;
   monthlyExpenses: number;
+  // Sección de egresos fijos, que se muestra debajo del encabezado
+  recurringSection?: React.ReactNode;
 }
 
 const PAGE_SIZE = 10;
 
-export default function EgresosContent({ expenses, totalExpenses, monthlyExpenses }: Props) {
+export default function EgresosContent({ expenses, totalExpenses, monthlyExpenses, recurringSection }: Props) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
@@ -69,6 +71,8 @@ export default function EgresosContent({ expenses, totalExpenses, monthlyExpense
           </Button>
         </Link>
       </div>
+
+      {recurringSection}
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
