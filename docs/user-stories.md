@@ -186,7 +186,36 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio: se rechazan cantidades menores o iguales a cero, no enteras o excesivas, listas de ítems vacías, `businessLine` fuera del enum, y nombre o teléfono vacíos o demasiado largos, con un mensaje claro.
   - Criterio: el negocio activo se obtiene con `getActiveBusinessId()`; se elimina la query propia.
   - Criterio: el mensaje de error que ve el visitante no expone detalles internos (ids, errores de Prisma).
+  - Criterio (2026-10-15): un mismo teléfono o IP no puede crear más de 5 pedidos en 10 minutos; el siguiente se rechaza con un mensaje que pide esperar (hallazgo C1 de `docs/seguridad/2026-10-15-revision.md`).
   `src/actions/public-orders.ts:createPublicOrder`
+- **US-56** ⬜ Como dueño de la plataforma, quiero que el seed no tenga contraseñas escritas en el código, para que leer el repositorio no dé acceso a ninguna cuenta (hallazgo C2 de `docs/seguridad/2026-10-15-revision.md`).
+  - Criterio: `prisma/seed.ts` toma las contraseñas iniciales de `SEED_SUPER_PASSWORD` y `SEED_ADMIN_PASSWORD`; si faltan, genera una al azar y la imprime una sola vez en consola.
+  - Criterio: `git grep -nE "super123|admin123"` no encuentra nada en el repo.
+  - Criterio: en producción ya no se puede entrar con `super@sistema.com` ni `admin@artemadisa.com` usando las contraseñas antiguas del seed (lo confirma una persona).
+- **US-57** ⬜ Como dueño del negocio, quiero que la app use versiones de Next.js y Auth.js sin vulnerabilidades críticas conocidas, para no quedar expuesto a ataques ya publicados (hallazgos A1, M2 y B3).
+  - Criterio: `next` queda en 16.4.2 o superior y `next-auth` en la última beta de v5.
+  - Criterio: `npm audit --omit=dev` no reporta vulnerabilidades críticas ni altas en `next`, `next-auth`, `@auth/core` ni `sharp`.
+  - Criterio: `shadcn` pasa a `devDependencies`.
+  - Criterio: `npm run build` pasa y el login, el catálogo público y una venta funcionan igual que antes.
+- **US-58** ⬜ Como `ADMIN`, quiero que al desactivar a un usuario o cambiar su rol pierda el acceso de inmediato, para que un empleado que se va no pueda seguir entrando con su sesión abierta (hallazgo A2).
+  - Criterio: un usuario desactivado con la sesión abierta recibe "No autenticado" en su siguiente acción y vuelve al login.
+  - Criterio: si el super administrador desactiva un negocio, sus usuarios pierden el acceso en la siguiente acción.
+  - Criterio: un cambio de rol se aplica en la siguiente acción sin volver a iniciar sesión.
+  - Criterio: la sesión dura como máximo 7 días.
+- **US-59** ⬜ Como dueño del negocio, quiero que el login bloquee los intentos repetidos, para que nadie pueda adivinar una contraseña probando muchas (hallazgos A3 y B5).
+  - Criterio: tras 5 intentos fallidos para un mismo email en 15 minutos, ese email queda bloqueado 15 minutos, aunque luego se use la contraseña correcta.
+  - Criterio: el mensaje es el mismo exista o no el email, para no revelar qué cuentas existen.
+  - Criterio: un login correcto reinicia el contador.
+  - Criterio: cada intento fallido y cada bloqueo quedan registrados con email, fecha e IP, nunca con la contraseña.
+- **US-60** ⬜ Como dueño del negocio, quiero que ningún usuario de otro negocio pueda vincular mis socios, artículos, proveedores o productos a sus registros, para que mis datos no se vean ni se alteren desde otro negocio (hallazgos A4, A5, A6 y M1).
+  - Criterio: crear o editar una inversión con un aporte de un socio de otro negocio se rechaza con "Socio no encontrado".
+  - Criterio: crear o editar un producto vinculado a un artículo de inventario de otro negocio se rechaza.
+  - Criterio: crear o editar un artículo con un proveedor de otro negocio se rechaza.
+  - Criterio: crear o editar una compra con un ítem que apunta a un producto de otro negocio se rechaza.
+- **US-61** ⬜ Como dueño del negocio, quiero que la app envíe cabeceras de seguridad y que el optimizador de imágenes solo acepte orígenes conocidos, para evitar clickjacking y que usen el sitio como proxy de imágenes (hallazgos M3 y M4).
+  - Criterio: las respuestas incluyen `X-Frame-Options: DENY` (o `frame-ancestors 'none'`), `X-Content-Type-Options: nosniff` y `Referrer-Policy: strict-origin-when-cross-origin`.
+  - Criterio: `/_next/image` rechaza una URL de un host que no sea Vercel Blob ni uno de los usados por el catálogo actual.
+  - Criterio: las imágenes del catálogo, de inventario y de perfil se siguen viendo en producción.
 
 ## Épico N — Usabilidad del panel
 
