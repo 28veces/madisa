@@ -71,7 +71,7 @@ export default function Sidebar() {
         </div>
       </Link>
 
-      <nav className="flex-1 px-4 py-4 space-y-1">
+      <nav className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4 space-y-1">
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive =
             href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);

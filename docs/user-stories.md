@@ -184,10 +184,12 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 
 ## Épico N — Usabilidad del panel
 
-- **US-54** ⬜ Como `ADMIN`/`SECRETARY`/`ACCOUNTANT`, quiero que el menú lateral tenga scroll para llegar a todas las opciones aunque no quepan en la pantalla.
+- **US-54** ✅ Como `ADMIN`/`SECRETARY`/`ACCOUNTANT`, quiero que el menú lateral tenga scroll para llegar a todas las opciones aunque no quepan en la pantalla.
+  `src/components/admin/Sidebar.tsx`
   - Criterio: con una ventana baja (ej. 600 px de alto) se puede bajar hasta "Catálogo público", "Ver sitio" y "Cerrar sesión".
   - Criterio: solo se desplaza el menú; el contenido de la página no se mueve con él.
   - Criterio: funciona en computadora y en celular.
+  - Criterio (2026-10-14): verificado en 1280×600 y en emulación de celular 390×600; "Ver sitio" y "Cerrar sesión" quedan fijos abajo y siempre visibles. Falta confirmarlo en un celular real.
 - **US-55** ✅ Como `ADMIN`/`SECRETARY`, quiero poder borrar el valor de un campo numérico (el 0 o el 1 que trae por defecto) y escribir otro, para cargar costos, precios y cantidades sin pelear con el campo.
   `src/lib/utils.ts:parseNumberField`, `src/components/admin/PurchaseForm.tsx`, `src/components/admin/SaleForm.tsx`, `src/app/(admin)/admin/ventas/[id]/SaleItemsEditor.tsx`, `src/components/admin/InvestmentForm.tsx`, `src/components/admin/AdjustmentForm.tsx`, `src/components/admin/ExpenseForm.tsx`, `src/components/public/ProductCard.tsx`
   - Criterio: en todos los campos numéricos del panel y del carrito se puede dejar el campo vacío mientras se escribe (Compras, Ventas, detalle de venta, Inversiones, Salidas, Productos, Egresos, Socios, Configuración y carrito público). Hoy el código vuelve a poner 0 o 1 al borrar.
