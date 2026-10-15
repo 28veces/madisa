@@ -346,3 +346,13 @@ enum AdjustmentReason {
   DAMAGE
   COUNT_ADJUSTMENT
 }
+
+// Intentos registrados para limitar acciones públicas o sensibles (pedidos públicos, login).
+// No pertenece a un negocio: la clave identifica al origen (IP, teléfono, email).
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}

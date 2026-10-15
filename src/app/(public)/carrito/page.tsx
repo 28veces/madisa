@@ -53,15 +53,17 @@ export default function CarritoPage() {
         items: items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          customization: item.customization,
+          customization: item.customization || undefined,
         })),
-        totalAmount: totalPrice(),
         notes: "Pedido desde el sitio web",
       });
 
       if (result.success) {
         toast.success(result.message);
+        // El total lo calcula el servidor con los precios actuales; el carrito guardado puede tener precios viejos.
+        if (result.totalAmount !== undefined && Math.abs(result.totalAmount - totalPrice()) >= 0.01) {
+          toast.info(`Los precios cambiaron desde que agregaste los artículos. Total del pedido: ${formatCurrency(result.totalAmount)}`);
+        }
         clearCart();
         setClientName("");
         setClientPhone("");

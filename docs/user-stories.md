@@ -177,17 +177,20 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 
 ## Épico M — Seguridad
 
-- **US-52** ⬜ Como dueño del negocio, quiero que los pedidos del sitio público usen los precios del catálogo y no los que envía el navegador, para que nadie pueda crear un pedido con precios alterados.
+- **US-52** ✅ Como dueño del negocio, quiero que los pedidos del sitio público usen los precios del catálogo y no los que envía el navegador, para que nadie pueda crear un pedido con precios alterados.
   - Criterio: `createPublicOrder` ignora `unitPrice` y `totalAmount` del cliente: toma el precio de cada producto de la base y calcula el total en el servidor.
   - Criterio: un pedido enviado con precios modificados queda guardado con los precios reales del catálogo.
   - Criterio: el carrito sigue mostrando el mismo total que se guarda.
-  `src/actions/public-orders.ts:createPublicOrder`
-- **US-53** ⬜ Como sistema, `createPublicOrder` debe validar su entrada con Zod y resolver el negocio con `getActiveBusinessId()`, como exigen las reglas duras.
+  - Criterio (2026-10-15): si el carrito guardado en el navegador tiene precios viejos, al enviar el pedido se avisa el total real con que quedó registrado (verificado con Playwright: precio alterado a 0.01 → se guardó 2 × 12 = 24).
+  `src/actions/public-orders.ts:createPublicOrder`, `src/app/(public)/carrito/page.tsx:CarritoPage`
+- **US-53** ✅ Como sistema, `createPublicOrder` debe validar su entrada con Zod y resolver el negocio con `getActiveBusinessId()`, como exigen las reglas duras.
   - Criterio: se rechazan cantidades menores o iguales a cero, no enteras o excesivas, listas de ítems vacías, `businessLine` fuera del enum, y nombre o teléfono vacíos o demasiado largos, con un mensaje claro.
   - Criterio: el negocio activo se obtiene con `getActiveBusinessId()`; se elimina la query propia.
   - Criterio: el mensaje de error que ve el visitante no expone detalles internos (ids, errores de Prisma).
   - Criterio (2026-10-15): un mismo teléfono o IP no puede crear más de 5 pedidos en 10 minutos; el siguiente se rechaza con un mensaje que pide esperar (hallazgo C1 de `docs/seguridad/2026-10-15-revision.md`).
-  `src/actions/public-orders.ts:createPublicOrder`
+  - Criterio (2026-10-15): el stock se verifica sumando todas las líneas del pedido que usan el mismo artículo, para que repetir un producto no permita superar lo disponible.
+  - Criterio (2026-10-15): el límite se guarda en la tabla `RateLimitHit` (migración aditiva) porque en Vercel cada request puede caer en otra instancia; con peticiones simultáneas nunca pasan más de 5 (probado con una ráfaga de 8: pasaron 4).
+  `src/actions/public-orders.ts:createPublicOrder`, `src/lib/rate-limit.ts:consumeRateLimit`, `prisma/migrations/20261015200000_rate_limit_hits`
 - **US-56** ⬜ Como dueño de la plataforma, quiero que el seed no tenga contraseñas escritas en el código, para que leer el repositorio no dé acceso a ninguna cuenta (hallazgo C2 de `docs/seguridad/2026-10-15-revision.md`).
   - Criterio: `prisma/seed.ts` toma las contraseñas iniciales de `SEED_SUPER_PASSWORD` y `SEED_ADMIN_PASSWORD`; si faltan, genera una al azar y la imprime una sola vez en consola.
   - Criterio: `git grep -nE "super123|admin123"` no encuentra nada en el repo.
