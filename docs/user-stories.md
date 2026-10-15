@@ -188,10 +188,13 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio: con una ventana baja (ej. 600 px de alto) se puede bajar hasta "Catálogo público", "Ver sitio" y "Cerrar sesión".
   - Criterio: solo se desplaza el menú; el contenido de la página no se mueve con él.
   - Criterio: funciona en computadora y en celular.
-- **US-55** ⬜ Como `ADMIN`/`SECRETARY`, quiero poder borrar el valor de un campo numérico (el 0 o el 1 que trae por defecto) y escribir otro, para cargar costos, precios y cantidades sin pelear con el campo.
+- **US-55** ✅ Como `ADMIN`/`SECRETARY`, quiero poder borrar el valor de un campo numérico (el 0 o el 1 que trae por defecto) y escribir otro, para cargar costos, precios y cantidades sin pelear con el campo.
+  `src/lib/utils.ts:parseNumberField`, `src/components/admin/PurchaseForm.tsx`, `src/components/admin/SaleForm.tsx`, `src/app/(admin)/admin/ventas/[id]/SaleItemsEditor.tsx`, `src/components/admin/InvestmentForm.tsx`, `src/components/admin/AdjustmentForm.tsx`, `src/components/admin/ExpenseForm.tsx`, `src/components/public/ProductCard.tsx`
   - Criterio: en todos los campos numéricos del panel y del carrito se puede dejar el campo vacío mientras se escribe (Compras, Ventas, detalle de venta, Inversiones, Salidas, Productos, Egresos, Socios, Configuración y carrito público). Hoy el código vuelve a poner 0 o 1 al borrar.
   - Criterio: al guardar, un campo obligatorio vacío o inválido muestra un mensaje en vez de guardarse como 0; las cantidades siguen exigiendo mínimo 1.
   - Criterio: los totales en pantalla tratan el campo vacío como 0 mientras se escribe, sin mostrar `NaN`.
+  - Criterio (2026-10-14): el costo unitario de una línea de compra y los montos de Egresos e Inversiones empiezan vacíos en vez de 0. El valor de compra y el costo de producción de una venta son opcionales: vacíos se guardan como 0. En el carrito público, la cantidad vacía vuelve a 1 al salir del campo. Socios y Configuración ya permitían vaciar el campo.
+  - Bug corregido: en Productos los mensajes de validación por campo ("Nombre requerido", "Escribe un precio válido"…) nunca se mostraban, solo el aviso genérico.
 
 ---
 

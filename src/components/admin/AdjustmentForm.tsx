@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createAdjustment } from "@/actions/inventory-adjustments";
+import { parseNumberField, type NumberField } from "@/lib/utils";
 import { ADJUSTMENT_REASONS, AdjustmentReasonValue } from "@/lib/adjustment-reasons";
 
 interface Item {
@@ -29,7 +30,7 @@ export default function AdjustmentForm({ items, initialItemId }: Props) {
   const [selected, setSelected] = useState<Item | undefined>(initialItem);
   const [search, setSearch] = useState(initialItem ? `${initialItem.code} - ${initialItem.description}` : "");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<NumberField>(1);
   const [reason, setReason] = useState<AdjustmentReasonValue>(
     initialItem?.category === "INSUMO" || !initialItem ? "CONSUMPTION" : "DAMAGE"
   );
@@ -45,6 +46,9 @@ export default function AdjustmentForm({ items, initialItemId }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected) return toast.error("Selecciona de la lista el artículo");
+    if (quantity === "" || quantity < 1 || !Number.isInteger(quantity)) {
+      return toast.error("La cantidad debe ser un número entero mayor que 0");
+    }
     if (quantity > selected.availableStock) {
       return toast.error(`Solo hay ${selected.availableStock} disponibles de ${selected.description}`);
     }
@@ -123,7 +127,7 @@ export default function AdjustmentForm({ items, initialItemId }: Props) {
             min={1}
             max={selected?.availableStock}
             value={quantity}
-            onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+            onChange={(e) => setQuantity(parseNumberField(e.target.value))}
             className="mt-1"
           />
         </div>

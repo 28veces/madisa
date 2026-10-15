@@ -9,13 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createPurchase, updatePurchase } from "@/actions/purchases";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, parseNumberField, toNumber, type NumberField } from "@/lib/utils";
 
 interface PurchaseLineItem {
   inventoryItemId: string;
   description: string;
-  quantity: number;
-  unitCost: number;
+  quantity: NumberField;
+  unitCost: NumberField;
 }
 
 interface InitialData {
@@ -57,7 +57,7 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
           quantity: item.quantity,
           unitCost: item.unitCost,
         }))
-      : [{ inventoryItemId: "", description: "", quantity: 1, unitCost: 0 }]
+      : [{ inventoryItemId: "", description: "", quantity: 1, unitCost: "" }]
   );
   const [loading, setLoading] = useState(false);
   const [itemSearchOpen, setItemSearchOpen] = useState<{ [key: number]: boolean }>({});
@@ -71,11 +71,11 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
     );
 
   const addLine = () =>
-    setItems([...items, { inventoryItemId: "", description: "", quantity: 1, unitCost: 0 }]);
+    setItems([...items, { inventoryItemId: "", description: "", quantity: 1, unitCost: "" }]);
 
   const removeLine = (i: number) => setItems(items.filter((_, idx) => idx !== i));
 
-  const updateItem = (i: number, field: keyof PurchaseLineItem, value: string | number) => {
+  const updateItem = (i: number, field: keyof PurchaseLineItem, value: string | NumberField) => {
     setItems(items.map((item, idx) => (idx === i ? { ...item, [field]: value } : item)));
   };
 
@@ -93,12 +93,18 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
     setItemSearchOpen({ ...itemSearchOpen, [i]: false });
   };
 
-  const total = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
+  const total = items.reduce((sum, item) => sum + toNumber(item.quantity) * toNumber(item.unitCost), 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.some((i) => !i.description.trim())) {
       return toast.error("Completa la descripción de cada item");
+    }
+    if (items.some((i) => i.quantity === "" || i.quantity < 1 || !Number.isInteger(i.quantity))) {
+      return toast.error("La cantidad de cada item debe ser un número entero mayor que 0");
+    }
+    if (items.some((i) => i.unitCost === "" || i.unitCost < 0)) {
+      return toast.error("Escribe el costo unitario de cada item");
     }
 
     const itemsWithIds = items.map((item) => {
@@ -126,8 +132,8 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
       items: itemsWithIds.map((item) => ({
         inventoryItemId: item.inventoryItemId,
         description: item.description,
-        quantity: item.quantity,
-        unitCost: item.unitCost,
+        quantity: toNumber(item.quantity),
+        unitCost: toNumber(item.unitCost),
       })),
     };
 
@@ -256,7 +262,7 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
                       type="number"
                       min={1}
                       value={item.quantity}
-                      onChange={(e) => updateItem(i, "quantity", parseInt(e.target.value) || 1)}
+                      onChange={(e) => updateItem(i, "quantity", parseNumberField(e.target.value))}
                       className="mt-1 h-9 text-sm"
                     />
                   </div>
@@ -265,9 +271,11 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
                     <Input
                       type="number"
                       step="0.01"
+                      min={0}
                       value={item.unitCost}
+                      placeholder="0.00"
                       onChange={(e) =>
-                        updateItem(i, "unitCost", parseFloat(e.target.value) || 0)
+                        updateItem(i, "unitCost", parseNumberField(e.target.value))
                       }
                       className="mt-1 h-9 text-sm"
                     />

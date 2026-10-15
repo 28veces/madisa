@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { createExpense, updateExpense, ExpenseFormData } from "@/actions/expenses";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { parseNumberField, type NumberField } from "@/lib/utils";
 
 interface Expense {
   id: string;
@@ -28,9 +29,10 @@ interface ExpenseFormProps {
 export default function ExpenseForm({ expense }: ExpenseFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<ExpenseFormData>({
+  // El monto puede quedar vacío mientras se escribe
+  const [formData, setFormData] = useState<Omit<ExpenseFormData, "amount"> & { amount: NumberField }>({
     description: expense?.description || "",
-    amount: expense?.amount || 0,
+    amount: expense ? expense.amount : "",
     category: expense?.category || "",
     isRecurring: expense?.isRecurring || false,
     expenseDate: expense?.expenseDate?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
@@ -39,12 +41,17 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.amount === "" || formData.amount <= 0) {
+      toast.error("Escribe el monto del egreso");
+      return;
+    }
+    const data: ExpenseFormData = { ...formData, amount: formData.amount };
     setIsSubmitting(true);
 
     try {
       const result = expense
-        ? await updateExpense(expense.id, formData)
-        : await createExpense(formData);
+        ? await updateExpense(expense.id, data)
+        : await createExpense(data);
 
       if (result.success) {
         toast.success(expense ? "Egreso actualizado" : "Egreso creado");
@@ -87,7 +94,7 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
               type="number"
               value={formData.amount}
               onChange={(e) =>
-                setFormData({ ...formData, amount: parseFloat(e.target.value) })
+                setFormData({ ...formData, amount: parseNumberField(e.target.value) })
               }
               placeholder="0.00"
               step="0.01"
