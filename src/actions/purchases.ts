@@ -15,7 +15,8 @@ const purchaseItemSchema = z.object({
 });
 
 const purchaseSchema = z.object({
-  description: z.string().min(1, "Descripción requerida"),
+  // La descripción la arma el servidor con los artículos comprados
+  description: z.string().optional(),
   supplierId: z.string().optional(),
   category: z.nativeEnum(PurchaseCategory),
   receiptUrl: z.string().url().optional().or(z.literal("")),
@@ -40,6 +41,23 @@ async function resolveItems(
   return items.map((i) => ({ ...i, description: byId.get(i.inventoryItemId)! }));
 }
 
+// Resumen legible de lo comprado, ej. "Taza 11oz ×3, Gorra ×2, Plato ×1 y 2 más"
+function describeItems(items: { description: string; quantity: number }[]) {
+  const shown = items.slice(0, 3).map((i) => `${i.description} ×${i.quantity}`).join(", ");
+  const rest = items.length - 3;
+  return rest > 0 ? `${shown} y ${rest} más` : shown;
+}
+
+// El proveedor es opcional; si viene, debe ser del negocio de la sesión.
+async function isValidSupplier(businessId: string, supplierId: string | undefined) {
+  if (!supplierId) return true;
+  const supplier = await prisma.supplier.findFirst({
+    where: { id: supplierId, businessId },
+    select: { id: true },
+  });
+  return !!supplier;
+}
+
 function revalidateStock() {
   revalidatePath("/admin/compras");
   revalidatePath("/admin/inventario");
@@ -57,12 +75,15 @@ export async function createPurchase(data: z.infer<typeof purchaseSchema>) {
 
   const items = await resolveItems(businessId, parsed.data.items);
   if (!items) return { error: { items: ["Artículo de inventario inválido"] } };
+  if (!(await isValidSupplier(businessId, parsed.data.supplierId))) {
+    return { error: { supplierId: ["Proveedor inválido"] } };
+  }
 
   const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
 
   await prisma.purchase.create({
     data: {
-      description: parsed.data.description,
+      description: describeItems(items),
       supplierId: parsed.data.supplierId || null,
       category: parsed.data.category,
       receiptUrl: parsed.data.receiptUrl || null,
@@ -117,6 +138,9 @@ export async function updatePurchase(id: string, data: z.infer<typeof purchaseSc
 
   const items = await resolveItems(businessId, parsed.data.items);
   if (!items) return { error: { items: ["Artículo de inventario inválido"] } };
+  if (!(await isValidSupplier(businessId, parsed.data.supplierId))) {
+    return { error: { supplierId: ["Proveedor inválido"] } };
+  }
 
   const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
 
@@ -125,7 +149,7 @@ export async function updatePurchase(id: string, data: z.infer<typeof purchaseSc
     prisma.purchase.update({
       where: { id },
       data: {
-        description: parsed.data.description,
+        description: describeItems(items),
         supplierId: parsed.data.supplierId || null,
         category: parsed.data.category,
         receiptUrl: parsed.data.receiptUrl || null,

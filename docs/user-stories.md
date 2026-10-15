@@ -81,8 +81,8 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 
 ## Épico F — Compras y proveedores
 
-- **US-25** 🟡 Como `ADMIN`/`SECRETARY`, quiero registrar compras con proveedor, categoría (sublimable/no sublimable/insumo/otros) y comprobante.
-  `src/actions/purchases.ts`
+- **US-25** ✅ Como `ADMIN`/`SECRETARY`, quiero registrar compras con proveedor, categoría (sublimable/no sublimable/insumo/otros) y comprobante.
+  `src/actions/purchases.ts:createPurchase`, `src/actions/purchases.ts:isValidSupplier`, `src/components/admin/PurchaseForm.tsx`, `src/app/(admin)/admin/compras/ComprasContent.tsx`
   - Criterio: al registrar o editar una compra, el stock del artículo (US-18) aumenta de inmediato en Inventario, catálogo admin y catálogo público.
   - Criterio: cada línea debe quedar vinculada al artículo que se ve en pantalla; si el usuario edita el texto después de elegir un artículo, el vínculo se pierde y debe volver a elegirlo de la lista. El servidor valida que el artículo pertenezca al negocio y guarda la descripción real del artículo.
   - Bug corregido (2026-09-22): el formulario conservaba el artículo elegido al reescribir el texto, así que la compra sumaba stock a otro artículo y en Inventario "no cambiaba el stock".
@@ -90,6 +90,8 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio (2026-10-14): el formulario tiene un campo para elegir el proveedor de la lista de proveedores activos del negocio; es opcional y se guarda en la compra (hoy se envía siempre vacío).
   - Criterio (2026-10-14): al elegir el primer artículo, si tiene proveedores asociados y aún no se eligió proveedor, se sugiere el primero; el usuario puede cambiarlo o quitarlo. Al editar una compra se muestra el proveedor guardado.
   - Criterio (2026-10-14): el servidor rechaza un proveedor que no pertenezca al negocio de la sesión.
+  - Criterio (2026-10-14): la descripción de la compra la arma el servidor con los artículos (ej. "Plato ×4, Taza ×2"); la lista muestra hasta 3 artículos con su cantidad y "+N más". La sugerencia de proveedor se hace una sola vez: si el usuario lo cambia o lo quita, no se vuelve a llenar.
+  - Bug corregido (2026-10-14): toda compra se guardaba como "Compra de materiales" y sin proveedor, porque el formulario mandaba ese texto fijo y el proveedor siempre vacío.
 - **US-26** ✅ Como `ADMIN`/`SECRETARY`, quiero editar una compra existente.
 - **US-27** 🟡 Como `ADMIN`, quiero eliminar una compra.
   - Criterio (2026-10-14): el listado o la pantalla de edición tiene un botón "Eliminar" visible solo para `ADMIN` (la action `deletePurchase` existe pero no hay botón en la interfaz).

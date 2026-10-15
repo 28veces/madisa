@@ -30,7 +30,6 @@ export default async function EditarCompraPage({ params }: Props) {
         inventoryItems={inventoryItems}
         purchaseId={purchase.id}
         initialData={{
-          description: purchase.description,
           supplierId: purchase.supplierId,
           category: purchase.category,
           purchaseDate: purchase.purchaseDate,

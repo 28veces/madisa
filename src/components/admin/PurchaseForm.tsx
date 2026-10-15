@@ -19,7 +19,6 @@ interface PurchaseLineItem {
 }
 
 interface InitialData {
-  description: string;
   supplierId: string | null;
   category: PurchaseCategory;
   purchaseDate: Date;
@@ -49,6 +48,11 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
       : new Date().toISOString().split("T")[0]
   );
   const [notes, setNotes] = useState(initialData?.notes ?? "");
+  const [supplierId, setSupplierId] = useState(initialData?.supplierId ?? "");
+  // La sugerencia de proveedor se hace una sola vez; si el usuario lo cambia o lo quita, se respeta
+  const [supplierTouched, setSupplierTouched] = useState(isEditing);
+  // Proveedores activos, más el ya guardado en la compra aunque esté inactivo
+  const supplierOptions = suppliers.filter((s) => s.isActive || s.id === supplierId);
   const [items, setItems] = useState<PurchaseLineItem[]>(
     initialData?.items.length
       ? initialData.items.map((item) => ({
@@ -91,6 +95,14 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
       )
     );
     setItemSearchOpen({ ...itemSearchOpen, [i]: false });
+    // Sugiere el proveedor del artículo si todavía no se eligió uno
+    if (!supplierTouched && !supplierId) {
+      const suggested = invItem.suppliers.find((s) => s.supplier.isActive)?.supplier;
+      if (suggested) {
+        setSupplierId(suggested.id);
+        setSupplierTouched(true);
+      }
+    }
   };
 
   const total = items.reduce((sum, item) => sum + toNumber(item.quantity) * toNumber(item.unitCost), 0);
@@ -124,8 +136,7 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
     const category = firstInvItem?.category ?? "SUBLIMABLE";
 
     const payload = {
-      description: "Compra de materiales",
-      supplierId: undefined as string | undefined,
+      supplierId: supplierId || undefined,
       category: category as PurchaseCategory,
       purchaseDate: new Date(purchaseDate),
       notes: notes || undefined,
@@ -162,6 +173,28 @@ export default function PurchaseForm({ suppliers = [], inventoryItems = [], purc
           onChange={(e) => setPurchaseDate(e.target.value)}
           className="mt-1"
         />
+      </div>
+
+      <div>
+        <Label htmlFor="supplierId">Proveedor</Label>
+        <select
+          id="supplierId"
+          value={supplierId}
+          onChange={(e) => {
+            setSupplierId(e.target.value);
+            setSupplierTouched(true);
+          }}
+          className="mt-1 h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <option value="">Sin proveedor</option>
+          {supplierOptions.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+              {s.isActive ? "" : " (inactivo)"}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-gray-400 mt-1">Se sugiere el proveedor del primer artículo que elijas</p>
       </div>
 
       <div>
