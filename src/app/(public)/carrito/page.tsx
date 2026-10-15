@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Trash2, ShoppingBag, MessageCircle, ImageIcon, Plus, Minus, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ export default function CarritoPage() {
   const [clientPhone, setClientPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const router = useRouter();
 
   if (items.length === 0) {
     return (
@@ -70,7 +72,7 @@ export default function CarritoPage() {
         setShowForm(false);
         // Redirigir después de 2 segundos
         setTimeout(() => {
-          window.location.href = "/catalogo";
+          router.push("/catalogo");
         }, 2000);
       } else {
         toast.error(result.message);

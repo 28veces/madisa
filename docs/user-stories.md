@@ -197,11 +197,14 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio: en producción ya no se puede entrar con `super@sistema.com` ni `admin@artemadisa.com` usando las contraseñas antiguas del seed (lo confirma una persona).
   - Pendiente: una persona debe cambiar esas dos contraseñas en producción y confirmarlo; el código ya no las contiene (verificado: seed con variables, sin variables y segunda corrida que no pisa usuarios existentes).
   `prisma/seed.ts:initialPassword`, `README.md`, `SETUP.md`
-- **US-57** ⬜ Como dueño del negocio, quiero que la app use versiones de Next.js y Auth.js sin vulnerabilidades críticas conocidas, para no quedar expuesto a ataques ya publicados (hallazgos A1, M2 y B3).
+- **US-57** ✅ Como dueño del negocio, quiero que la app use versiones de Next.js y Auth.js sin vulnerabilidades críticas conocidas, para no quedar expuesto a ataques ya publicados (hallazgos A1, M2 y B3).
   - Criterio: `next` queda en 16.4.2 o superior y `next-auth` en la última beta de v5.
   - Criterio: `npm audit --omit=dev` no reporta vulnerabilidades críticas ni altas en `next`, `next-auth`, `@auth/core` ni `sharp`.
   - Criterio: `shadcn` pasa a `devDependencies`.
   - Criterio: `npm run build` pasa y el login, el catálogo público y una venta funcionan igual que antes.
+  - Criterio (2026-10-15): se usa `next@16.3.8` y no 16.4.2: según `npm audit`, la 16.3.8 ya corrige todos los avisos, y la 16.4.2 salió el mismo día de la historia. Con ella `sharp` resuelve a 0.35.5 (corregida). `npm audit --omit=dev` pasó de 30 vulnerabilidades (4 críticas) a 3 altas, todas de la CLI de Prisma (`@prisma/config`/`deepmerge-ts`), que solo corre en el build y se corrige con Prisma 7.
+  - Bug corregido: la regla nueva `no-location-assign-relative-destination` de `eslint-config-next` 16.3.8 marcaba la redirección del carrito; ahora usa `router.push`.
+  `package.json`, `package-lock.json`
 - **US-58** ⬜ Como `ADMIN`, quiero que al desactivar a un usuario o cambiar su rol pierda el acceso de inmediato, para que un empleado que se va no pueda seguir entrando con su sesión abierta (hallazgo A2).
   - Criterio: un usuario desactivado con la sesión abierta recibe "No autenticado" en su siguiente acción y vuelve al login.
   - Criterio: si el super administrador desactiva un negocio, sus usuarios pierden el acceso en la siguiente acción.
