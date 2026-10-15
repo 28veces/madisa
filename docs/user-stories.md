@@ -57,12 +57,14 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   `src/actions/inventory-items.ts:getInventoryItemsWithPurchaseQty`
   - Criterio (2026-09-22): Inventario muestra también el costo promedio ponderado por unidad (Σ cantidad × costo unitario / Σ cantidad de sus compras), el mismo que se usa como costo sugerido en las ventas.
 - **US-19** ✅ Como `ADMIN`, quiero eliminar artículos de inventario que ya no se usan.
-- **US-49** ✅ Como `ADMIN`/`SECRETARY`, quiero registrar salidas de inventario que no son ventas (consumo de insumos en producción, mermas/daños, ajustes por conteo físico) para que el stock refleje lo que realmente queda.
+- **US-49** 🟡 Como `ADMIN`/`SECRETARY`, quiero registrar salidas de inventario que no son ventas (consumo de insumos en producción, mermas/daños, ajustes por conteo físico) para que el stock refleje lo que realmente queda.
   `src/actions/inventory-adjustments.ts`, `src/lib/stock.ts`, `src/app/(admin)/admin/salidas/`
   - Criterio: aplica a cualquier artículo, no solo insumos. Se registra artículo, cantidad (entera, en la unidad de compra: paquete, botella…), fecha, motivo y nota opcional.
   - Criterio: la disponibilidad pasa a ser compras − ventas − salidas en todo el sistema (Inventario, catálogo admin y público, ventas, pedidos públicos). No se puede sacar más de lo disponible.
   - Criterio: la salida no cuenta como egreso (el costo ya se registró en la compra). En Ganancias solo restan las mermas y ajustes de conteo; el consumo de insumos va estimado en el costo de producción de cada venta (US-34).
   - Criterio: `ADMIN` puede eliminar una salida (el stock se repone); `ACCOUNTANT` solo la ve.
+  - Criterio (2026-10-14): `ADMIN`/`SECRETARY` pueden editar una salida (artículo, cantidad, fecha, motivo, nota) sin borrarla y volver a crearla.
+  - Criterio (2026-10-14): al editar, la validación de stock considera la cantidad original de la salida (dentro de una transacción); si la nueva cantidad supera lo disponible, no se guarda y se muestra el disponible.
   - Futuro: descuento automático de insumos por receta de producto al vender (requiere recetas y cantidades fraccionarias).
 
 ## Épico E — Ventas
@@ -79,20 +81,31 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 
 ## Épico F — Compras y proveedores
 
-- **US-25** ✅ Como `ADMIN`/`SECRETARY`, quiero registrar compras con proveedor, categoría (sublimable/no sublimable/insumo/otros) y comprobante.
+- **US-25** 🟡 Como `ADMIN`/`SECRETARY`, quiero registrar compras con proveedor, categoría (sublimable/no sublimable/insumo/otros) y comprobante.
   `src/actions/purchases.ts`
   - Criterio: al registrar o editar una compra, el stock del artículo (US-18) aumenta de inmediato en Inventario, catálogo admin y catálogo público.
   - Criterio: cada línea debe quedar vinculada al artículo que se ve en pantalla; si el usuario edita el texto después de elegir un artículo, el vínculo se pierde y debe volver a elegirlo de la lista. El servidor valida que el artículo pertenezca al negocio y guarda la descripción real del artículo.
   - Bug corregido (2026-09-22): el formulario conservaba el artículo elegido al reescribir el texto, así que la compra sumaba stock a otro artículo y en Inventario "no cambiaba el stock".
+  - Criterio (2026-10-14): el listado de Compras muestra qué se compró (artículos con cantidad, o el primero y "+N más"), no el texto fijo "Compra de materiales". Aplica también a las compras ya registradas, que tienen ese texto guardado.
+  - Criterio (2026-10-14): el formulario tiene un campo para elegir el proveedor de la lista de proveedores activos del negocio; es opcional y se guarda en la compra (hoy se envía siempre vacío).
+  - Criterio (2026-10-14): al elegir el primer artículo, si tiene proveedores asociados y aún no se eligió proveedor, se sugiere el primero; el usuario puede cambiarlo o quitarlo. Al editar una compra se muestra el proveedor guardado.
+  - Criterio (2026-10-14): el servidor rechaza un proveedor que no pertenezca al negocio de la sesión.
 - **US-26** ✅ Como `ADMIN`/`SECRETARY`, quiero editar una compra existente.
-- **US-27** ✅ Como `ADMIN`, quiero eliminar una compra.
+- **US-27** 🟡 Como `ADMIN`, quiero eliminar una compra.
+  - Criterio (2026-10-14): el listado o la pantalla de edición tiene un botón "Eliminar" visible solo para `ADMIN` (la action `deletePurchase` existe pero no hay botón en la interfaz).
+  - Criterio (2026-10-14): pide confirmación antes de borrar y, al eliminar, el stock de los artículos baja en Inventario y catálogo.
+  - Criterio (2026-10-14): si eliminarla deja stock negativo (lo comprado ya se vendió o se sacó), no se elimina y se muestra un mensaje claro.
 - **US-28** ✅ Como `ADMIN`/`SECRETARY`, quiero gestionar proveedores (crear, editar, listar, activar/desactivar).
   `src/actions/suppliers.ts`
 
 ## Épico G — Egresos e inversiones
 
-- **US-29** ✅ Como `ADMIN`, quiero registrar egresos operativos (con opción de marcarlos recurrentes) fuera del flujo de compras/inventario.
+- **US-29** 🟡 Como `ADMIN`, quiero registrar egresos operativos (con opción de marcarlos recurrentes) fuera del flujo de compras/inventario.
   `src/actions/expenses.ts`
+  - Criterio (2026-10-14): un egreso fijo se define con descripción, categoría, monto estimado, frecuencia (mensual, cada 3 meses, cada 6 meses, anual) y fecha del próximo pago. Ej.: fumigación cada 3 meses, permiso anual de propaganda.
+  - Criterio (2026-10-14): cuando llega la fecha, la app avisa en Egresos (y en el dashboard) que el egreso está pendiente; no lo registra sola.
+  - Criterio (2026-10-14): al confirmar el pago se crea el egreso con el monto (editable) y la fecha reales, y la fecha del próximo pago avanza según la frecuencia. También se puede omitir esa vez, sin crear egreso.
+  - Criterio (2026-10-14): un egreso fijo se puede editar y desactivar. Los egresos ya marcados como "Recurrente" siguen viéndose igual (la migración no borra datos).
 - **US-30** ✅ Como `ADMIN`, quiero registrar inversiones de capital (maquinaria, mejoras de local, equipo) categorizadas.
   `src/actions/investments.ts`
 - **US-31** ✅ Como `ADMIN`, quiero repartir el monto de una inversión entre socios según su aporte real (contribuciones individuales).
@@ -168,6 +181,17 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio: el negocio activo se obtiene con `getActiveBusinessId()`; se elimina la query propia.
   - Criterio: el mensaje de error que ve el visitante no expone detalles internos (ids, errores de Prisma).
   `src/actions/public-orders.ts:createPublicOrder`
+
+## Épico N — Usabilidad del panel
+
+- **US-54** ⬜ Como `ADMIN`/`SECRETARY`/`ACCOUNTANT`, quiero que el menú lateral tenga scroll para llegar a todas las opciones aunque no quepan en la pantalla.
+  - Criterio: con una ventana baja (ej. 600 px de alto) se puede bajar hasta "Catálogo público", "Ver sitio" y "Cerrar sesión".
+  - Criterio: solo se desplaza el menú; el contenido de la página no se mueve con él.
+  - Criterio: funciona en computadora y en celular.
+- **US-55** ⬜ Como `ADMIN`/`SECRETARY`, quiero poder borrar el valor de un campo numérico (el 0 o el 1 que trae por defecto) y escribir otro, para cargar costos, precios y cantidades sin pelear con el campo.
+  - Criterio: en todos los campos numéricos del panel y del carrito se puede dejar el campo vacío mientras se escribe (Compras, Ventas, detalle de venta, Inversiones, Salidas, Productos, Egresos, Socios, Configuración y carrito público). Hoy el código vuelve a poner 0 o 1 al borrar.
+  - Criterio: al guardar, un campo obligatorio vacío o inválido muestra un mensaje en vez de guardarse como 0; las cantidades siguen exigiendo mínimo 1.
+  - Criterio: los totales en pantalla tratan el campo vacío como 0 mientras se escribe, sin mostrar `NaN`.
 
 ---
 
