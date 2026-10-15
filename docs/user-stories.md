@@ -57,8 +57,8 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   `src/actions/inventory-items.ts:getInventoryItemsWithPurchaseQty`
   - Criterio (2026-09-22): Inventario muestra también el costo promedio ponderado por unidad (Σ cantidad × costo unitario / Σ cantidad de sus compras), el mismo que se usa como costo sugerido en las ventas.
 - **US-19** ✅ Como `ADMIN`, quiero eliminar artículos de inventario que ya no se usan.
-- **US-49** 🟡 Como `ADMIN`/`SECRETARY`, quiero registrar salidas de inventario que no son ventas (consumo de insumos en producción, mermas/daños, ajustes por conteo físico) para que el stock refleje lo que realmente queda.
-  `src/actions/inventory-adjustments.ts`, `src/lib/stock.ts`, `src/app/(admin)/admin/salidas/`
+- **US-49** ✅ Como `ADMIN`/`SECRETARY`, quiero registrar salidas de inventario que no son ventas (consumo de insumos en producción, mermas/daños, ajustes por conteo físico) para que el stock refleje lo que realmente queda.
+  `src/actions/inventory-adjustments.ts`, `src/actions/inventory-adjustments.ts:updateAdjustment`, `src/lib/stock.ts`, `src/app/(admin)/admin/salidas/`, `src/app/(admin)/admin/salidas/[id]/page.tsx`, `src/components/admin/AdjustmentForm.tsx`
   - Criterio: aplica a cualquier artículo, no solo insumos. Se registra artículo, cantidad (entera, en la unidad de compra: paquete, botella…), fecha, motivo y nota opcional.
   - Criterio: la disponibilidad pasa a ser compras − ventas − salidas en todo el sistema (Inventario, catálogo admin y público, ventas, pedidos públicos). No se puede sacar más de lo disponible.
   - Criterio: la salida no cuenta como egreso (el costo ya se registró en la compra). En Ganancias solo restan las mermas y ajustes de conteo; el consumo de insumos va estimado en el costo de producción de cada venta (US-34).

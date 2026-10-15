@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,8 @@ const reasonColors: Record<string, string> = {
 };
 
 export default function SalidasContent({ adjustments, canDelete, canCreate }: Props) {
+  // Editar lo pueden ADMIN y SECRETARY (los mismos que crean); eliminar solo ADMIN
+  const showActions = canCreate || canDelete;
   const [search, setSearch] = useState("");
   const [reason, setReason] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -116,7 +118,7 @@ export default function SalidasContent({ adjustments, canDelete, canCreate }: Pr
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Cantidad</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Motivo</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Nota</th>
-                {canDelete && (
+                {showActions && (
                   <th className="text-right py-3 px-4 font-medium text-gray-600">Acciones</th>
                 )}
               </tr>
@@ -124,7 +126,7 @@ export default function SalidasContent({ adjustments, canDelete, canCreate }: Pr
             <tbody className="divide-y divide-gray-50">
               {paginated.length === 0 && (
                 <tr>
-                  <td colSpan={canDelete ? 6 : 5} className="text-center py-10 text-gray-400">
+                  <td colSpan={showActions ? 6 : 5} className="text-center py-10 text-gray-400">
                     Sin salidas registradas.
                   </td>
                 </tr>
@@ -141,9 +143,20 @@ export default function SalidasContent({ adjustments, canDelete, canCreate }: Pr
                     <Badge className={reasonColors[a.reason]}>{adjustmentReasonLabel(a.reason)}</Badge>
                   </td>
                   <td className="py-3 px-4 text-gray-600 text-xs">{a.note || "—"}</td>
-                  {canDelete && (
+                  {showActions && (
                     <td className="py-3 px-4 text-right">
-                      <DeleteAdjustmentButton id={a.id} label={`${a.quantity} × ${a.description}`} />
+                      <div className="flex items-center justify-end gap-1">
+                        {canCreate && (
+                          <Link href={`/admin/salidas/${a.id}`} aria-label={`Editar salida de ${a.description}`}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        )}
+                        {canDelete && (
+                          <DeleteAdjustmentButton id={a.id} label={`${a.quantity} × ${a.description}`} />
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
