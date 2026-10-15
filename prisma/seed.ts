@@ -1,11 +1,22 @@
 import { config } from "dotenv";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
 
 config({ path: ".env.local" });
 config({ path: ".env" });
 
 const prisma = new PrismaClient();
+
+// Contraseña inicial de un usuario del seed: se toma de la variable de entorno o se genera
+// al azar y se imprime una sola vez. Nunca se escribe en el código (repo público).
+function initialPassword(envVar: string, email: string) {
+  const fromEnv = process.env[envVar];
+  if (fromEnv) return fromEnv;
+  const generated = randomBytes(12).toString("base64url");
+  console.log(`🔑 Contraseña generada para ${email}: ${generated} (defínela con ${envVar} para fijarla)`);
+  return generated;
+}
 
 async function main() {
   // Create bootstrap business
@@ -21,7 +32,10 @@ async function main() {
   console.log("✅ Negocio creado:", business.name);
 
   // Create super admin user
-  const superAdminHash = await bcrypt.hash("super123", 10);
+  const superAdminExists = await prisma.user.findUnique({ where: { email: "super@sistema.com" } });
+  const superAdminHash = superAdminExists
+    ? ""
+    : await bcrypt.hash(initialPassword("SEED_SUPER_PASSWORD", "super@sistema.com"), 10);
   const superAdmin = await prisma.user.upsert({
     where: { email: "super@sistema.com" },
     update: {},
@@ -36,7 +50,10 @@ async function main() {
   console.log("✅ Usuario SUPER_ADMIN creado:", superAdmin.email);
 
   // Create admin user for the business
-  const adminHash = await bcrypt.hash("admin123", 10);
+  const adminExists = await prisma.user.findUnique({ where: { email: "admin@artemadisa.com" } });
+  const adminHash = adminExists
+    ? ""
+    : await bcrypt.hash(initialPassword("SEED_ADMIN_PASSWORD", "admin@artemadisa.com"), 10);
   const adminUser = await prisma.user.upsert({
     where: { email: "admin@artemadisa.com" },
     update: {},
