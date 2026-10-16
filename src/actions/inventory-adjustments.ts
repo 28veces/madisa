@@ -111,10 +111,14 @@ export async function updateAdjustment(id: string, data: z.infer<typeof adjustme
 
       // Con la salida ya actualizada, el stock del artículo no puede quedar negativo.
       // Lo disponible para esta salida es lo que queda más su propia cantidad.
+      // Si el artículo ya estaba en negativo por pedidos bajo pedido (US-64), se permite
+      // editar la salida mientras no saque más unidades que antes del mismo artículo.
       const remaining = await getAvailableStock(tx, parsed.data.inventoryItemId);
-      if (remaining < 0) {
+      const takesMore =
+        parsed.data.inventoryItemId !== adjustment.inventoryItemId || parsed.data.quantity > adjustment.quantity;
+      if (remaining < 0 && takesMore) {
         throw new Error(
-          `No hay suficiente stock de ${item.description} (disponible: ${remaining + parsed.data.quantity})`
+          `No hay suficiente stock de ${item.description} (disponible: ${Math.max(remaining + parsed.data.quantity, 0)})`
         );
       }
     });

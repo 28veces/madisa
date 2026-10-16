@@ -2,6 +2,7 @@ import { getProduct } from "@/actions/products";
 import { getInventoryItemsForSale } from "@/actions/inventory-items";
 import ProductForm from "@/components/admin/ProductForm";
 import { notFound } from "next/navigation";
+import { auth } from "@/lib/auth";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -11,9 +12,10 @@ export default async function EditarProductoPage({ params }: Props) {
   // Los productos del seed usan el nombre como id (con espacios/acentos) y el
   // segmento llega codificado; decodificarlo no afecta a los ids normales (cuid).
   const id = decodeURIComponent((await params).id);
-  const [product, inventoryItems] = await Promise.all([
+  const [product, inventoryItems, session] = await Promise.all([
     getProduct(id).catch(() => null),
     getInventoryItemsForSale().catch(() => []),
+    auth(),
   ]);
 
   if (!product) notFound();
@@ -27,6 +29,7 @@ export default async function EditarProductoPage({ params }: Props) {
       <ProductForm
         redirectTo="/admin/catalogo"
         inventoryItems={inventoryItems}
+        canSetBackorder={session?.user?.role === "ADMIN"}
         product={{
           id: product.id,
           name: product.name,
@@ -38,6 +41,7 @@ export default async function EditarProductoPage({ params }: Props) {
           imageUrl: product.imageUrl ?? "",
           inventoryItemId: product.inventoryItemId ?? "",
           isActive: product.isActive,
+          allowBackorder: product.allowBackorder,
         }}
       />
     </div>

@@ -14,6 +14,9 @@ export interface CartItem {
   customization: string;
   imageUrl?: string;
   maxStock?: number;
+  // Stock del artículo al agregarlo; en productos bajo pedido puede ser menor que la cantidad (US-64)
+  availableStock?: number;
+  allowBackorder?: boolean;
 }
 
 interface CartState {
@@ -35,11 +38,21 @@ export const useCartStore = create<CartState>()(
         set((state) => {
           const existing = state.items.find((i) => i.productId === item.productId);
           if (existing) {
+            // Se toman el límite y el stock recién leídos del catálogo, por si cambiaron
+            // desde que el producto entró al carrito (p. ej. se activó el bajo pedido).
             const newQty = existing.quantity + (item.quantity ?? 1);
-            const limited = existing.maxStock != null ? Math.min(newQty, existing.maxStock) : newQty;
+            const limited = item.maxStock != null ? Math.min(newQty, item.maxStock) : newQty;
             return {
               items: state.items.map((i) =>
-                i.productId === item.productId ? { ...i, quantity: limited } : i
+                i.productId === item.productId
+                  ? {
+                      ...i,
+                      quantity: limited,
+                      maxStock: item.maxStock,
+                      availableStock: item.availableStock,
+                      allowBackorder: item.allowBackorder,
+                    }
+                  : i
               ),
             };
           }

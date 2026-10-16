@@ -64,13 +64,19 @@ export default function AdjustmentForm({ items: rawItems, initialItemId, adjustm
     (it) => it.code.toLowerCase().includes(q) || it.description.toLowerCase().includes(q)
   );
 
+  // Al editar, mantener o bajar la cantidad del mismo artículo siempre se permite, aunque el
+  // artículo esté en negativo por pedidos bajo pedido (US-64); el servidor aplica la misma regla.
+  const originalQuantity =
+    initialData && selected?.id === initialData.inventoryItemId ? initialData.quantity : 0;
+  const maxQuantity = selected ? Math.max(selected.availableStock, originalQuantity) : undefined;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected) return toast.error("Selecciona de la lista el artículo");
     if (quantity === "" || quantity < 1 || !Number.isInteger(quantity)) {
       return toast.error("La cantidad debe ser un número entero mayor que 0");
     }
-    if (quantity > selected.availableStock) {
+    if (quantity > selected.availableStock && quantity > originalQuantity) {
       return toast.error(`Solo hay ${selected.availableStock} disponibles de ${selected.description}`);
     }
 
@@ -155,7 +161,7 @@ export default function AdjustmentForm({ items: rawItems, initialItemId, adjustm
             id="quantity"
             type="number"
             min={1}
-            max={selected?.availableStock}
+            max={maxQuantity}
             value={quantity}
             onChange={(e) => setQuantity(parseNumberField(e.target.value))}
             className="mt-1"

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCartStore } from "@/stores/cartStore";
 import { getCategoryLabel, getTechniqueLabel } from "@/lib/whatsapp";
-import { formatCurrency, parseNumberField, type NumberField, isOptimizableImage } from "@/lib/utils";
+import { formatCurrency, parseNumberField, type NumberField, isOptimizableImage, MAX_ORDER_QUANTITY } from "@/lib/utils";
 
 interface ProductCardProps {
   id: string;
@@ -23,6 +23,7 @@ interface ProductCardProps {
   basePrice: number;
   imageUrl?: string | null;
   availableStock?: number;
+  allowBackorder?: boolean;
 }
 
 export default function ProductCard({
@@ -35,6 +36,7 @@ export default function ProductCard({
   basePrice,
   imageUrl,
   availableStock,
+  allowBackorder = false,
 }: ProductCardProps) {
   const [customization, setCustomization] = useState("");
   const [quantity, setQuantity] = useState<NumberField>(1);
@@ -42,14 +44,16 @@ export default function ProductCard({
   const cartItems = useCartStore((s) => s.items);
 
   const inCart = cartItems.find((i) => i.productId === id)?.quantity ?? 0;
-  const remaining = availableStock != null ? availableStock - inCart : Infinity;
-  const outOfStock = availableStock != null && availableStock <= 0;
+  // Bajo pedido: el límite es el tope por artículo, no el stock (US-64)
+  const limit = availableStock == null ? undefined : allowBackorder ? MAX_ORDER_QUANTITY : availableStock;
+  const remaining = limit != null ? limit - inCart : Infinity;
+  const outOfStock = !allowBackorder && availableStock != null && availableStock <= 0;
   const atLimit = remaining <= 0;
 
   const handleAdd = () => {
     if (outOfStock || atLimit) return;
     const qty = quantity === "" ? 1 : quantity;
-    const safeQty = availableStock != null ? Math.min(qty, remaining) : qty;
+    const safeQty = limit != null ? Math.min(qty, remaining) : qty;
     addItem({
       productId: id,
       name,
@@ -60,7 +64,9 @@ export default function ProductCard({
       quantity: safeQty,
       customization,
       imageUrl: imageUrl ?? undefined,
-      maxStock: availableStock,
+      maxStock: limit,
+      availableStock,
+      allowBackorder,
     });
     toast.success(`${name} agregado al carrito`);
     setCustomization("");
@@ -118,21 +124,27 @@ export default function ProductCard({
               Cantidad
               {availableStock != null && (
                 <span className="ml-1 text-gray-400">
-                  ({remaining > 0 ? `${remaining} disponibles` : "sin stock"})
+                  ({allowBackorder
+                    ? availableStock > 0
+                      ? `${availableStock} disponibles · más bajo pedido`
+                      : "bajo pedido"
+                    : remaining > 0
+                      ? `${remaining} disponibles`
+                      : "sin stock"})
                 </span>
               )}
             </Label>
             <Input
               type="number"
               min={1}
-              max={availableStock != null ? remaining : undefined}
+              max={limit != null ? remaining : undefined}
               value={quantity}
               onChange={(e) => {
                 const parsed = parseNumberField(e.target.value);
                 // Vacío se permite mientras se escribe; al salir del campo vuelve a 1
                 if (parsed === "") return setQuantity("");
                 const val = Math.max(1, Math.floor(parsed));
-                setQuantity(availableStock != null ? Math.min(val, remaining) : val);
+                setQuantity(limit != null ? Math.min(val, remaining) : val);
               }}
               onBlur={() => setQuantity((q) => (q === "" ? 1 : q))}
               disabled={outOfStock || atLimit}

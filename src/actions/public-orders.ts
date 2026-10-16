@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getActiveBusinessId } from "@/lib/require-auth";
 import { consumeRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getAvailableStock, getAverageUnitCosts, lineCost } from "@/lib/stock";
+import { MAX_ORDER_QUANTITY } from "@/lib/utils";
 
 // El precio y el total no se reciben: se calculan en el servidor con los precios del catálogo.
 const publicOrderSchema = z.object({
@@ -22,7 +23,7 @@ const publicOrderSchema = z.object({
           .number()
           .int("La cantidad debe ser un número entero")
           .min(1, "La cantidad debe ser al menos 1")
-          .max(100, "La cantidad máxima por artículo es 100"),
+          .max(MAX_ORDER_QUANTITY, `La cantidad máxima por artículo es ${MAX_ORDER_QUANTITY}`),
         customization: z.string().trim().max(500, "La personalización es demasiado larga").optional(),
       })
     )
@@ -74,29 +75,38 @@ export async function createPublicOrder(data: PublicOrderData) {
         return { ...item, product, unitPrice: product.basePrice };
       });
 
-      // El stock se verifica por artículo sumando todas las líneas que lo usan,
-      // para que repetir un producto en el pedido no permita superar lo disponible.
-      const quantityByItem = new Map<string, { quantity: number; name: string }>();
+      // El stock se verifica por artículo con todas las líneas que lo usan, para que repetir
+      // un producto no permita superar lo disponible. Lo disponible se asigna primero a los
+      // productos sin bajo pedido, que deben caber completos; lo que falte en los productos
+      // bajo pedido queda registrado en backorderQuantity (US-64).
+      const linesByItem = new Map<string, typeof lines>();
       for (const line of lines) {
         const inventoryItemId = line.product.inventoryItemId;
         if (!inventoryItemId) continue;
-        const current = quantityByItem.get(inventoryItemId) ?? { quantity: 0, name: line.product.name };
-        current.quantity += line.quantity;
-        quantityByItem.set(inventoryItemId, current);
+        linesByItem.set(inventoryItemId, [...(linesByItem.get(inventoryItemId) ?? []), line]);
       }
-      for (const [inventoryItemId, { quantity, name }] of quantityByItem) {
-        const available = await getAvailableStock(tx, inventoryItemId);
-        if (available < quantity) {
-          throw new PublicOrderError(`Stock insuficiente de "${name}". Disponible: ${Math.max(available, 0)}`);
+      const backorderByLine = new Map<(typeof lines)[number], number>();
+      for (const [inventoryItemId, itemLines] of linesByItem) {
+        let remaining = Math.max(await getAvailableStock(tx, inventoryItemId), 0);
+        const ordered = [...itemLines].sort((a, b) => Number(a.product.allowBackorder) - Number(b.product.allowBackorder));
+        for (const line of ordered) {
+          const fromStock = Math.min(line.quantity, remaining);
+          remaining -= fromStock;
+          if (fromStock === line.quantity) continue;
+          if (!line.product.allowBackorder) {
+            const available = fromStock + remaining;
+            throw new PublicOrderError(`Stock insuficiente de "${line.product.name}". Disponible: ${available}`);
+          }
+          backorderByLine.set(line, line.quantity - fromStock);
         }
       }
 
       // El costo se calcula en el servidor (costo promedio de compra), nunca desde el cliente
-      const avgCosts = await getAverageUnitCosts(tx, [...quantityByItem.keys()]);
+      const avgCosts = await getAverageUnitCosts(tx, [...linesByItem.keys()]);
       const totalAmount =
         Math.round(lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0) * 100) / 100;
 
-      return tx.sale.create({
+      const created = await tx.sale.create({
         data: {
           clientName: order.clientName,
           clientPhone: order.clientPhone,
@@ -113,18 +123,24 @@ export async function createPublicOrder(data: PublicOrderData) {
                 quantity: line.quantity,
                 unitPrice: line.unitPrice,
                 productionCost: lineCost(avgCosts.get(line.product.inventoryItemId!) ?? 0, line.quantity),
+                backorderQuantity: backorderByLine.get(line) ?? 0,
                 customization: line.customization,
               })),
           },
         },
       });
+      const backorderUnits = [...backorderByLine.values()].reduce((sum, units) => sum + units, 0);
+      return { ...created, backorderUnits };
     });
 
     return {
       success: true,
       saleId: sale.id,
       totalAmount: sale.totalAmount,
-      message: "Pedido creado exitosamente. El administrador lo revisará pronto.",
+      message:
+        sale.backorderUnits > 0
+          ? `Pedido creado exitosamente. ${sale.backorderUnits} unidades se consiguen bajo pedido y pueden tardar más. El administrador lo revisará pronto.`
+          : "Pedido creado exitosamente. El administrador lo revisará pronto.",
     };
   } catch (error) {
     if (error instanceof PublicOrderError) return { success: false, message: error.message };

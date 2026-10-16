@@ -19,7 +19,14 @@ const productSchema = z.object({
   imageUrl: z.string().url().optional().or(z.literal("")),
   inventoryItemId: z.string().optional().or(z.literal("")),
   isActive: z.boolean().default(true),
+  allowBackorder: z.boolean().default(false),
 });
+
+// Solo el ADMIN decide si un producto se puede pedir bajo pedido (US-64). Si el campo
+// no viene en el formulario o lo envía otro rol, se conserva el valor actual (false al crear).
+function backorderValue(role: UserRole, formData: FormData, requested: boolean, current: boolean) {
+  return role === UserRole.ADMIN && formData.has("allowBackorder") ? requested : current;
+}
 
 // El artículo de inventario vinculado, si viene, debe ser del negocio de la sesión.
 async function isValidInventoryItem(businessId: string, inventoryItemId: string | undefined) {
@@ -29,7 +36,7 @@ async function isValidInventoryItem(businessId: string, inventoryItemId: string 
 }
 
 export async function createProduct(formData: FormData) {
-  const { businessId } = await requireBusiness([UserRole.ADMIN, UserRole.SECRETARY]);
+  const { businessId, role } = await requireBusiness([UserRole.ADMIN, UserRole.SECRETARY]);
   const parsed = productSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description") || undefined,
@@ -40,6 +47,7 @@ export async function createProduct(formData: FormData) {
     imageUrl: formData.get("imageUrl") || undefined,
     inventoryItemId: formData.get("inventoryItemId") || undefined,
     isActive: formData.get("isActive") === "true",
+    allowBackorder: formData.get("allowBackorder") === "true",
   });
 
   if (!parsed.success) {
@@ -56,10 +64,11 @@ export async function createProduct(formData: FormData) {
     parsed.data.imageUrl = uploaded.url;
   }
 
-  const { inventoryItemId, ...rest } = parsed.data;
+  const { inventoryItemId, allowBackorder, ...rest } = parsed.data;
   await prisma.product.create({
     data: {
       ...rest,
+      allowBackorder: backorderValue(role, formData, allowBackorder, false),
       businessId,
       ...(inventoryItemId ? { inventoryItemId } : {}),
     },
@@ -70,7 +79,7 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function updateProduct(id: string, formData: FormData) {
-  const { businessId } = await requireBusiness([UserRole.ADMIN, UserRole.SECRETARY]);
+  const { businessId, role } = await requireBusiness([UserRole.ADMIN, UserRole.SECRETARY]);
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product || product.businessId !== businessId) throw new Error("Sin permiso");
 
@@ -84,6 +93,7 @@ export async function updateProduct(id: string, formData: FormData) {
     imageUrl: formData.get("imageUrl") || undefined,
     inventoryItemId: formData.get("inventoryItemId") || undefined,
     isActive: formData.get("isActive") === "true",
+    allowBackorder: formData.get("allowBackorder") === "true",
   });
 
   if (!parsed.success) {
@@ -100,11 +110,12 @@ export async function updateProduct(id: string, formData: FormData) {
     parsed.data.imageUrl = uploaded.url;
   }
 
-  const { inventoryItemId, ...rest } = parsed.data;
+  const { inventoryItemId, allowBackorder, ...rest } = parsed.data;
   await prisma.product.update({
     where: { id },
     data: {
       ...rest,
+      allowBackorder: backorderValue(role, formData, allowBackorder, product.allowBackorder),
       inventoryItemId: inventoryItemId || null,
     },
   });
@@ -165,6 +176,7 @@ export async function getPublicProducts(category?: Category) {
 
   return products.filter((p) => {
     if (!p.inventoryItemId) return true; // arreglos u otros sin inventario
+    if (p.allowBackorder) return true; // bajo pedido: se muestra aunque no haya stock (US-64)
     return availableStock(p.inventoryItem!) > 0;
   });
 }

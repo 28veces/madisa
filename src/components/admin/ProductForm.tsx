@@ -36,12 +36,15 @@ interface FormValues {
   imageUrl: string;
   inventoryItemId: string;
   isActive: boolean;
+  allowBackorder: boolean;
 }
 
 interface Props {
   product?: Partial<FormValues> & { id?: string };
   redirectTo?: string;
   inventoryItems?: InventoryOption[];
+  // Solo el ADMIN ve y cambia la casilla "bajo pedido"; el servidor lo vuelve a verificar
+  canSetBackorder?: boolean;
 }
 
 const categories = [
@@ -66,7 +69,7 @@ const techniques = [
   { value: "OTRO", label: "Otro" },
 ];
 
-export default function ProductForm({ product, redirectTo = "/admin/catalogo", inventoryItems = [] }: Props) {
+export default function ProductForm({ product, redirectTo = "/admin/catalogo", inventoryItems = [], canSetBackorder = false }: Props) {
   const router = useRouter();
   const {
     register,
@@ -86,6 +89,7 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
       imageUrl: product?.imageUrl ?? "",
       inventoryItemId: product?.inventoryItemId ?? "",
       isActive: product?.isActive ?? true,
+      allowBackorder: product?.allowBackorder ?? false,
     },
   });
 
@@ -139,7 +143,11 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
     }
 
     const fd = new FormData();
-    Object.entries(values).forEach(([k, v]) => fd.append(k, String(v)));
+    Object.entries(values).forEach(([k, v]) => {
+      // Sin la casilla visible no se envía, para que el servidor conserve el valor actual
+      if (k === "allowBackorder" && !canSetBackorder) return;
+      fd.append(k, String(v));
+    });
     if (photoFile) fd.append("photo", photoFile);
 
     const result = product?.id
@@ -340,6 +348,23 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
           />
           <Label htmlFor="isActive" className="cursor-pointer">Visible en catálogo público</Label>
         </div>
+
+        {canSetBackorder && (
+          <div className="sm:col-span-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="allowBackorder"
+                {...register("allowBackorder")}
+                className="h-4 w-4 rounded border-gray-300 text-teal-600"
+              />
+              <Label htmlFor="allowBackorder" className="cursor-pointer">Se puede pedir bajo pedido</Label>
+            </div>
+            <p className="text-xs text-gray-500 mt-1 ml-6">
+              Los clientes del sitio podrán pedir más unidades de las que hay en inventario; las que falten se consiguen con proveedores.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3 pt-2">

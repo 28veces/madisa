@@ -14,6 +14,7 @@ interface SaleItem {
   unitPrice: number;
   productionCost: number;
   extraCost: number;
+  backorderQuantity: number;
   inventoryItem: { description: string };
 }
 
@@ -142,6 +143,11 @@ export default function VentasContent({ sales }: Props) {
                     </td>
                     <td className="py-3 px-4 text-gray-600">
                       {sale.items.map((i) => `${i.inventoryItem.description} ×${i.quantity}`).join(", ")}
+                      {sale.items.some((i) => i.backorderQuantity > 0) && (
+                        <Badge className="ml-2 bg-amber-100 text-amber-800 hover:bg-amber-100">
+                          Bajo pedido: {sale.items.reduce((sum, i) => sum + i.backorderQuantity, 0)} u.
+                        </Badge>
+                      )}
                     </td>
                     <td className="py-3 px-4 text-right font-bold text-gray-900">
                       {formatCurrency(Number(sale.totalAmount))}

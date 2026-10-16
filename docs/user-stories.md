@@ -35,6 +35,18 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 - **US-11** ✅ Como visitante, quiero un botón de WhatsApp para contactar directamente al negocio.
   `src/components/public/WhatsAppButton.tsx`, `src/lib/whatsapp.ts`
 - **US-12** ⬜ Como visitante, quiero recibir confirmación de mi pedido (hoy el pedido se crea en estado `PENDING` pero no hay notificación automática por email/WhatsApp al cliente).
+- **US-64** ✅ Como `ADMIN`, quiero marcar un producto como "disponible bajo pedido" para que los clientes del sitio público puedan pedir más unidades de las que hay en inventario, ya que puedo conseguir las extras con mis proveedores (pedido del cliente, 2026-10-16).
+  - Criterio: el formulario de producto tiene la casilla "Se puede pedir bajo pedido", apagada por defecto; los productos que no la tienen siguen limitados al stock, como hoy.
+  - Criterio: en un producto bajo pedido, el carrito y `createPublicOrder` aceptan cantidades mayores al stock (con el tope de 100 por artículo de US-53), y el producto aparece en el catálogo público aunque su stock sea 0.
+  - Criterio: cuando la cantidad supera lo disponible, el carrito muestra un aviso como "Hay 3 disponibles; las otras 7 se consiguen bajo pedido y pueden tardar más", y el pedido se crea igual.
+  - Criterio: en el panel, la venta indica qué líneas quedaron bajo pedido y cuántas unidades faltan, y en Inventario el artículo se ve con stock negativo marcado como "faltan N" hasta que se registre la compra.
+  - Criterio: un producto sin la casilla sigue rechazando un pedido que supera el stock con "Stock insuficiente", y las ventas manuales del panel (US-20) siguen exigiendo stock.
+  - Criterio (2026-10-16): solo el `ADMIN` ve y cambia la casilla; si el campo no llega o lo envía otro rol, el servidor conserva el valor actual. Si dos productos comparten artículo, lo disponible se asigna primero a los que no son bajo pedido.
+  - Criterio (2026-10-16): la venta guarda en `SaleItem.backorderQuantity` cuántas unidades se pidieron sin stock; es un dato histórico, por eso el panel dice "Pedido sin stock: 7 de 10 unidades bajo pedido" (no "faltan"). Inventario sí refleja lo que falta hoy ("faltan N").
+  - Criterio (2026-10-16): con el artículo en negativo no se puede eliminar una compra de ese artículo (regla de US-27, aceptado) ni registrar salidas nuevas; una salida existente sí se puede editar mientras no saque más unidades que antes.
+  - Verificado con Playwright contra una base temporal: casilla del ADMIN; la SECRETARY no la ve y una inyección del campo no la cambia (control: como ADMIN sí); catálogo con producto bajo pedido de stock 0; carrito con 10 de stock 3 muestra el aviso; pedido creado con 7 bajo pedido; producto sin casilla rechaza 5 con stock 2; venta, listado e inventario marcados; edición de salida con el artículo en −7.
+  - Migración `20261016000000_product_backorder`: solo agrega dos columnas con valor por defecto.
+  `src/actions/public-orders.ts:createPublicOrder`, `src/actions/products.ts:backorderValue`, `src/components/admin/ProductForm.tsx`, `src/components/public/ProductCard.tsx`, `src/app/(public)/carrito/page.tsx`, `src/actions/inventory-adjustments.ts:updateAdjustment`
 
 ## Épico C — Catálogo (panel admin)
 
