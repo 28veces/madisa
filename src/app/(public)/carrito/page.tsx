@@ -134,6 +134,13 @@ export default function CarritoPage() {
               <p className="text-sm font-medium text-gray-700 mt-1">
                 {formatCurrency(item.unitPrice)} c/u
               </p>
+              {item.allowBackorder && item.availableStock != null && item.quantity > Math.max(item.availableStock, 0) && (
+                <p className="text-xs text-amber-700 bg-amber-50 rounded-md px-2 py-1 mt-1">
+                  {item.availableStock > 0
+                    ? `Hay ${item.availableStock} disponibles; las otras ${item.quantity - item.availableStock} se consiguen bajo pedido y pueden tardar más.`
+                    : `Este producto se consigue bajo pedido; puede tardar más.`}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col items-end gap-2">

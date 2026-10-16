@@ -171,7 +171,8 @@ export default function InventarioContent({ items }: Props) {
                   </td>
                   <td className="py-3 px-4 text-right font-semibold">
                     <span className={item.availableStock <= 0 ? "text-red-600" : item.availableStock <= 3 ? "text-amber-600" : "text-gray-900"}>
-                      {item.availableStock}
+                      {/* Stock negativo = unidades pedidas bajo pedido que aún no se compran (US-64) */}
+                      {item.availableStock < 0 ? `faltan ${-item.availableStock}` : item.availableStock}
                     </span>
                   </td>
                   <td className="py-3 px-4 text-right text-gray-600">

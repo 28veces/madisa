@@ -57,6 +57,7 @@ async function ProductGrid({ category }: { category?: string }) {
             basePrice={Number(p.basePrice)}
             imageUrl={p.imageUrl ?? p.inventoryItem?.imageUrl}
             availableStock={stock}
+            allowBackorder={p.allowBackorder}
           />
         );
       })}

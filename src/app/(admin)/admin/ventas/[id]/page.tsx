@@ -113,6 +113,7 @@ export default async function SaleDetailPage({ params }: Props) {
           description: item.inventoryItem.description,
           customization: item.customization,
           quantity: item.quantity,
+          backorderQuantity: item.backorderQuantity,
           unitPrice: Number(item.unitPrice),
           productionCost: Number(item.productionCost),
           extraCost: Number(item.extraCost),

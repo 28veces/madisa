@@ -14,6 +14,7 @@ interface Item {
   description: string;
   customization: string | null;
   quantity: number;
+  backorderQuantity: number;
   unitPrice: number;
   productionCost: number;
   extraCost: number;
@@ -116,6 +117,11 @@ export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }:
                         <p className="font-medium text-gray-900">{item.description}</p>
                         {item.customization && (
                           <p className="text-xs text-gray-500">Personalización: {item.customization}</p>
+                        )}
+                        {item.backorderQuantity > 0 && (
+                          <p className="text-xs font-medium text-amber-700">
+                            Pedido sin stock: {item.backorderQuantity} de {item.quantity} unidades bajo pedido
+                          </p>
                         )}
                       </td>
                       <td className="text-right py-3 px-2">{item.quantity}</td>

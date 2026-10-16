@@ -48,3 +48,7 @@ export function isOptimizableImage(src: string) {
     return false;
   }
 }
+
+// Tope de unidades por artículo en un pedido del sitio público (US-53); también es el
+// límite del carrito para productos bajo pedido, que no se limitan al stock (US-64).
+export const MAX_ORDER_QUANTITY = 100;

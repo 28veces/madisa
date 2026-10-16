@@ -54,6 +54,8 @@ model Product {
   business        Business       @relation(fields: [businessId], references: [id])
   inventoryItemId String?
   inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
+  // Permite pedir desde el sitio público más unidades de las que hay en inventario (US-64)
+  allowBackorder  Boolean        @default(false)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   purchaseItems   PurchaseItem[]
@@ -80,18 +82,20 @@ model Sale {
 }
 
 model SaleItem {
-  id              String        @id @default(cuid())
-  saleId          String
-  inventoryItemId String
-  quantity        Int
-  unitPrice       Float
+  id                String        @id @default(cuid())
+  saleId            String
+  inventoryItemId   String
+  quantity          Int
+  unitPrice         Float
   // Valor de compra de la línea: cantidad × costo promedio del artículo (se sugiere solo)
-  productionCost  Float         @default(0)
+  productionCost    Float         @default(0)
   // Costo de producción estimado de la línea: tinta, luz, papel, tape… (lo escribe el usuario)
-  extraCost       Float         @default(0)
-  customization   String?
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
-  sale            Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  extraCost         Float         @default(0)
+  // Unidades de la línea que no había en inventario al crear el pedido (bajo pedido, US-64)
+  backorderQuantity Int           @default(0)
+  customization     String?
+  inventoryItem     InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  sale              Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
 }
 
 model Partner {
