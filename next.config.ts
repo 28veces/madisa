@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
   experimental: {
+    // Sin caché de Turbopack en disco para `next build` (US-66): Vercel lo restaura entre
+    // despliegues y en US-65 publicó la hoja de estilos anterior. El build tarda algo más,
+    // pero siempre compila el CSS del código actual. El caché de `next dev` sigue activo.
+    turbopackFileSystemCacheForBuild: false,
     serverActions: {
       // Server Actions rechaza payloads >1MB por defecto; las fotos de perfil/producto
       // permiten hasta 5MB en src/lib/upload.ts, así que el límite del framework debe igualarlo.
