@@ -175,6 +175,7 @@ export default async function HomePage() {
                   imageUrl={imageOf(p)}
                   availableStock={p.inventoryItem ? availableStock(p.inventoryItem) : undefined}
                   allowBackorder={p.allowBackorder}
+                  backorderLimit={p.backorderLimit}
                 />
               ))}
             </div>

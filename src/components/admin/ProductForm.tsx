@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { createProduct, updateProduct } from "@/actions/products";
 import { ImageIcon, Upload, X } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, DEFAULT_BACKORDER_LIMIT, MAX_ORDER_QUANTITY } from "@/lib/utils";
 
 interface InventoryOption {
   id: string;
@@ -37,6 +37,7 @@ interface FormValues {
   inventoryItemId: string;
   isActive: boolean;
   allowBackorder: boolean;
+  backorderLimit: number;
 }
 
 interface Props {
@@ -90,6 +91,7 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
       inventoryItemId: product?.inventoryItemId ?? "",
       isActive: product?.isActive ?? true,
       allowBackorder: product?.allowBackorder ?? false,
+      backorderLimit: product?.backorderLimit ?? DEFAULT_BACKORDER_LIMIT,
     },
   });
 
@@ -128,6 +130,13 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
     if (!values.technique) errs.technique = { message: "Técnica requerida" };
     if (!values.material.trim()) errs.material = { message: "Material requerido" };
     if (Number.isNaN(values.basePrice) || values.basePrice < 0) errs.basePrice = { message: "Escribe un precio válido" };
+    if (
+      canSetBackorder &&
+      values.allowBackorder &&
+      (!Number.isInteger(values.backorderLimit) || values.backorderLimit < 1 || values.backorderLimit > MAX_ORDER_QUANTITY)
+    ) {
+      errs.backorderLimit = { message: `Escribe un número entero de 1 a ${MAX_ORDER_QUANTITY}` };
+    }
     return errs;
   };
 
@@ -145,7 +154,9 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
     const fd = new FormData();
     Object.entries(values).forEach(([k, v]) => {
       // Sin la casilla visible no se envía, para que el servidor conserve el valor actual
-      if (k === "allowBackorder" && !canSetBackorder) return;
+      if ((k === "allowBackorder" || k === "backorderLimit") && !canSetBackorder) return;
+      // Con la casilla apagada el tope no se usa: se conserva el que había
+      if (k === "backorderLimit" && !values.allowBackorder) return;
       fd.append(k, String(v));
     });
     if (photoFile) fd.append("photo", photoFile);
@@ -363,6 +374,24 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
             <p className="text-xs text-gray-500 mt-1 ml-6">
               Los clientes del sitio podrán pedir más unidades de las que hay en inventario; las que falten se consiguen con proveedores.
             </p>
+            {watch("allowBackorder") && (
+              <div className="mt-3 ml-6 max-w-xs">
+                <Label htmlFor="backorderLimit">Máximo bajo pedido por pedido</Label>
+                <Input
+                  id="backorderLimit"
+                  type="number"
+                  min={1}
+                  max={MAX_ORDER_QUANTITY}
+                  step={1}
+                  {...register("backorderLimit", { valueAsNumber: true })}
+                  className="mt-1 w-28"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Unidades sin stock que acepta un solo pedido del sitio para este producto.
+                </p>
+                {errors.backorderLimit && <p className="text-xs text-red-500 mt-1">{errors.backorderLimit.message}</p>}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -42,6 +42,7 @@ export default async function EditarProductoPage({ params }: Props) {
           inventoryItemId: product.inventoryItemId ?? "",
           isActive: product.isActive,
           allowBackorder: product.allowBackorder,
+          backorderLimit: product.backorderLimit,
         }}
       />
     </div>

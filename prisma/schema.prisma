@@ -56,6 +56,8 @@ model Product {
   inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id])
   // Permite pedir desde el sitio público más unidades de las que hay en inventario (US-64)
   allowBackorder  Boolean        @default(false)
+  // Unidades sin stock que acepta un pedido del sitio público para este producto (US-67)
+  backorderLimit  Int            @default(10)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   purchaseItems   PurchaseItem[]
