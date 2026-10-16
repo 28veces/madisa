@@ -26,9 +26,13 @@ export default function UpdateSaleStatusButton({
   currentStatus: string;
 }) {
   const handleChange = async (status: string | null) => {
-    if (!status) return;
-    await updateSaleStatus(id, status as SaleStatus);
-    toast.success("Estado actualizado");
+    if (!status || status === currentStatus) return;
+    const result = await updateSaleStatus(id, status as SaleStatus);
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(status === "CANCELLED" ? "Venta cancelada; sus unidades volvieron al inventario" : "Estado actualizado");
   };
 
   return (
