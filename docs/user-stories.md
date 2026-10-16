@@ -208,13 +208,13 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio: `README.md` y `SETUP.md` dejan de mencionar SQLite, `dev.db` y `db:push` como flujo principal, y explican `docker compose up -d` + `npm run db:migrate` + `npm run db:seed`.
   - Criterio: `.env.example` queda versionado (hoy lo excluye el patrón `.env*` de `.gitignore`), con valores de ejemplo falsos.
   - Criterio: las credenciales de los usuarios del seed figuran como "solo para desarrollo".
-- **US-66** 🟡 Como dueño del negocio, quiero que cada despliegue publique los estilos del código que se acaba de unir, para que el sitio no salga con colores viejos o texto invisible (pasó en US-65: Vercel reutilizó el caché de compilación de Turbopack y sirvió la hoja de estilos anterior, con texto blanco sobre blanco en el banner y el pie, hasta un redeploy sin caché).
+- **US-66** ✅ Como dueño del negocio, quiero que cada despliegue publique los estilos del código que se acaba de unir, para que el sitio no salga con colores viejos o texto invisible (pasó en US-65: Vercel reutilizó el caché de compilación de Turbopack y sirvió la hoja de estilos anterior, con texto blanco sobre blanco en el banner y el pie, hasta un redeploy sin caché).
   - Criterio: `next.config.ts` desactiva el caché de Turbopack en disco para los builds (`experimental.turbopackFileSystemCacheForBuild: false`), con un comentario que explique por qué; el caché de `next dev` no cambia.
   - Criterio: `npm run build` pasa y, tras cambiar un color en `globals.css` y volver a compilar sin borrar `.next`, la hoja de estilos generada trae el color nuevo y no el anterior.
   - Criterio: después de desplegar, la hoja de estilos de producción contiene las clases de la paleta (`bg-ink`, `bg-lavender`, `text-sun`); si falta alguna, el despliegue se considera fallido y se rehace sin caché.
   - Criterio: la lección queda en `AGENTS.md` (si producción se ve sin estilos o con los anteriores, redeploy sin "Use existing Build Cache").
   - Verificado (2026-10-15): `npm run build` pasa (compilación de ~1 s a ~11 s sin caché); se cambió `--color-ink` a `#123456`, se recompiló sin borrar `.next` y el CSS trajo `.bg-ink{background-color:#123456}`, y al revertir volvió a `#28243d`. La hoja de producción tras el redeploy manual sin caché trae `bg-ink`, `bg-lavender` y `text-sun`; hay que repetir esa comprobación al desplegar esta historia.
-  - Pendiente: tras desplegar US-66, comprobar que la hoja de estilos de producción trae `bg-ink`, `bg-lavender` y `text-sun` y pasar la historia a ✅. En local el caché no reprodujo el CSS viejo, así que la causa en Vercel es la más probable pero no quedó confirmada con sus logs.
+  - Verificado en producción (2026-10-15, despliegue de `2bf564b`): la hoja de estilos trae `bg-ink`, `bg-lavender`, `bg-violet`, `bg-coral` y `text-sun`; el pie se ve índigo (`rgb(40, 36, 61)`) y el inicio a 360 px no tiene scroll horizontal. En local el caché no reprodujo el CSS viejo, así que la causa en Vercel es la más probable pero no quedó confirmada con sus logs.
   `next.config.ts`, `AGENTS.md`
 
 ## Épico M — Seguridad
