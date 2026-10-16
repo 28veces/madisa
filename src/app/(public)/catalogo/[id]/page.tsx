@@ -104,8 +104,8 @@ export default async function ProductDetailPage({ params }: Props) {
                 <dt className="text-ink/65">Disponibilidad</dt>
                 <dd className={`font-semibold text-right ${stock > 0 ? "text-green-700" : product.allowBackorder ? "text-amber-700" : "text-red-700"}`}>
                   {stock > 0
-                    ? product.allowBackorder ? `${stock} disponibles · más bajo pedido` : "Disponible"
-                    : product.allowBackorder ? "Bajo pedido" : "Sin stock"}
+                    ? product.allowBackorder ? `${stock} disponibles · hasta ${product.backorderLimit} más bajo pedido` : "Disponible"
+                    : product.allowBackorder ? `Bajo pedido (hasta ${product.backorderLimit})` : "Sin stock"}
                 </dd>
               </div>
             )}
@@ -121,6 +121,7 @@ export default async function ProductDetailPage({ params }: Props) {
               material={product.material || ""}
               availableStock={stock}
               allowBackorder={product.allowBackorder}
+              backorderLimit={product.backorderLimit}
             />
             <a
               href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "50760000000"}?text=${encodeURIComponent(`Hola! Quiero hacer un pedido de: ${product.name}`)}`}

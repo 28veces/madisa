@@ -83,6 +83,7 @@ async function ProductGrid({ category, search }: { category?: string; search?: s
               imageUrl={p.imageUrl ?? p.inventoryItem?.imageUrl}
               availableStock={stock}
               allowBackorder={p.allowBackorder}
+              backorderLimit={p.backorderLimit}
             />
           );
         })}

@@ -17,6 +17,8 @@ export interface CartItem {
   // Stock del artículo al agregarlo; en productos bajo pedido puede ser menor que la cantidad (US-64)
   availableStock?: number;
   allowBackorder?: boolean;
+  // Unidades sin stock que acepta un pedido de este producto (US-67)
+  backorderLimit?: number;
 }
 
 interface CartState {
@@ -51,6 +53,7 @@ export const useCartStore = create<CartState>()(
                       maxStock: item.maxStock,
                       availableStock: item.availableStock,
                       allowBackorder: item.allowBackorder,
+                      backorderLimit: item.backorderLimit,
                     }
                   : i
               ),

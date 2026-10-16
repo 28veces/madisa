@@ -101,6 +101,21 @@ export async function createPublicOrder(data: PublicOrderData) {
         }
       }
 
+      // Cada producto acepta por pedido como máximo su tope de unidades sin stock, sumando
+      // todas sus líneas, para que un pedido no deje el inventario muy en negativo (US-67).
+      const backorderByProduct = new Map<string, number>();
+      for (const [line, units] of backorderByLine) {
+        backorderByProduct.set(line.product.id, (backorderByProduct.get(line.product.id) ?? 0) + units);
+      }
+      for (const [productId, units] of backorderByProduct) {
+        const product = productById.get(productId)!;
+        if (units > product.backorderLimit) {
+          throw new PublicOrderError(
+            `Solo se pueden pedir ${product.backorderLimit} unidades bajo pedido de "${product.name}". Revisa tu carrito`
+          );
+        }
+      }
+
       // El costo se calcula en el servidor (costo promedio de compra), nunca desde el cliente
       const avgCosts = await getAverageUnitCosts(tx, [...linesByItem.keys()]);
       const totalAmount =

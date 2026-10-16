@@ -7,7 +7,7 @@ import { Trash2, ShoppingBag, MessageCircle, ImageIcon, Plus, Minus, Loader2, Se
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
-import { formatCurrency, cn, isOptimizableImage } from "@/lib/utils";
+import { formatCurrency, cn, isOptimizableImage, DEFAULT_BACKORDER_LIMIT } from "@/lib/utils";
 import { useState } from "react";
 import { createPublicOrder } from "@/actions/public-orders";
 import { toast } from "sonner";
@@ -139,8 +139,8 @@ export default function CarritoPage() {
               {item.allowBackorder && item.availableStock != null && item.quantity > Math.max(item.availableStock, 0) && (
                 <p className="text-xs text-amber-700 bg-amber-50 rounded-md px-2 py-1 mt-1">
                   {item.availableStock > 0
-                    ? `Hay ${item.availableStock} disponibles; las otras ${item.quantity - item.availableStock} se consiguen bajo pedido y pueden tardar más.`
-                    : `Este producto se consigue bajo pedido; puede tardar más.`}
+                    ? `Hay ${item.availableStock} disponibles; puedes pedir hasta ${item.backorderLimit ?? DEFAULT_BACKORDER_LIMIT} más bajo pedido. Las otras ${item.quantity - item.availableStock} pueden tardar más.`
+                    : `Este producto se consigue bajo pedido (hasta ${item.backorderLimit ?? DEFAULT_BACKORDER_LIMIT} unidades por pedido); puede tardar más.`}
                 </p>
               )}
             </div>

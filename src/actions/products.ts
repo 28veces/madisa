@@ -8,6 +8,7 @@ import { Category, Technique, UserRole } from "@prisma/client";
 import { saveUploadedImage } from "@/lib/upload";
 import { randomUUID } from "crypto";
 import { stockInclude, availableStock } from "@/lib/stock";
+import { DEFAULT_BACKORDER_LIMIT, MAX_ORDER_QUANTITY } from "@/lib/utils";
 
 const productSchema = z.object({
   name: z.string().min(1, "Nombre requerido"),
@@ -20,12 +21,14 @@ const productSchema = z.object({
   inventoryItemId: z.string().optional().or(z.literal("")),
   isActive: z.boolean().default(true),
   allowBackorder: z.boolean().default(false),
+  backorderLimit: z.coerce.number().int("Debe ser un número entero").min(1, "Mínimo 1").max(MAX_ORDER_QUANTITY, `Máximo ${MAX_ORDER_QUANTITY}`).default(DEFAULT_BACKORDER_LIMIT),
 });
 
-// Solo el ADMIN decide si un producto se puede pedir bajo pedido (US-64). Si el campo
-// no viene en el formulario o lo envía otro rol, se conserva el valor actual (false al crear).
-function backorderValue(role: UserRole, formData: FormData, requested: boolean, current: boolean) {
-  return role === UserRole.ADMIN && formData.has("allowBackorder") ? requested : current;
+// Solo el ADMIN decide si un producto se puede pedir bajo pedido (US-64) y cuántas unidades
+// sin stock acepta cada pedido (US-67). Si el campo no viene en el formulario o lo envía
+// otro rol, se conserva el valor actual (el valor por defecto al crear).
+function backorderValue<T>(role: UserRole, formData: FormData, field: string, requested: T, current: T) {
+  return role === UserRole.ADMIN && formData.has(field) ? requested : current;
 }
 
 // El artículo de inventario vinculado, si viene, debe ser del negocio de la sesión.
@@ -48,6 +51,7 @@ export async function createProduct(formData: FormData) {
     inventoryItemId: formData.get("inventoryItemId") || undefined,
     isActive: formData.get("isActive") === "true",
     allowBackorder: formData.get("allowBackorder") === "true",
+    backorderLimit: formData.get("backorderLimit") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -64,11 +68,12 @@ export async function createProduct(formData: FormData) {
     parsed.data.imageUrl = uploaded.url;
   }
 
-  const { inventoryItemId, allowBackorder, ...rest } = parsed.data;
+  const { inventoryItemId, allowBackorder, backorderLimit, ...rest } = parsed.data;
   await prisma.product.create({
     data: {
       ...rest,
-      allowBackorder: backorderValue(role, formData, allowBackorder, false),
+      allowBackorder: backorderValue(role, formData, "allowBackorder", allowBackorder, false),
+      backorderLimit: backorderValue(role, formData, "backorderLimit", backorderLimit, DEFAULT_BACKORDER_LIMIT),
       businessId,
       ...(inventoryItemId ? { inventoryItemId } : {}),
     },
@@ -94,6 +99,7 @@ export async function updateProduct(id: string, formData: FormData) {
     inventoryItemId: formData.get("inventoryItemId") || undefined,
     isActive: formData.get("isActive") === "true",
     allowBackorder: formData.get("allowBackorder") === "true",
+    backorderLimit: formData.get("backorderLimit") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -110,12 +116,13 @@ export async function updateProduct(id: string, formData: FormData) {
     parsed.data.imageUrl = uploaded.url;
   }
 
-  const { inventoryItemId, allowBackorder, ...rest } = parsed.data;
+  const { inventoryItemId, allowBackorder, backorderLimit, ...rest } = parsed.data;
   await prisma.product.update({
     where: { id },
     data: {
       ...rest,
-      allowBackorder: backorderValue(role, formData, allowBackorder, product.allowBackorder),
+      allowBackorder: backorderValue(role, formData, "allowBackorder", allowBackorder, product.allowBackorder),
+      backorderLimit: backorderValue(role, formData, "backorderLimit", backorderLimit, product.backorderLimit),
       inventoryItemId: inventoryItemId || null,
     },
   });

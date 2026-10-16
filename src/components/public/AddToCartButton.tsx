@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
-import { MAX_ORDER_QUANTITY } from "@/lib/utils";
+import { DEFAULT_BACKORDER_LIMIT, orderLimit } from "@/lib/utils";
 import { ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -16,6 +16,7 @@ interface AddToCartButtonProps {
   material?: string;
   availableStock?: number;
   allowBackorder?: boolean;
+  backorderLimit?: number;
 }
 
 export default function AddToCartButton({
@@ -27,14 +28,15 @@ export default function AddToCartButton({
   material = "",
   availableStock,
   allowBackorder = false,
+  backorderLimit = DEFAULT_BACKORDER_LIMIT,
 }: AddToCartButtonProps) {
   const addItem = useCartStore((s) => s.addItem);
   const cartItems = useCartStore((s) => s.items);
   const [loading, setLoading] = useState(false);
 
   const inCart = cartItems.find((i) => i.productId === productId)?.quantity ?? 0;
-  // Bajo pedido: el límite es el tope por artículo, no el stock (US-64)
-  const limit = availableStock == null ? undefined : allowBackorder ? MAX_ORDER_QUANTITY : availableStock;
+  // Bajo pedido: el límite es el stock más el tope de unidades sin stock (US-64, US-67)
+  const limit = orderLimit(availableStock, allowBackorder, backorderLimit);
   const outOfStock = !allowBackorder && availableStock != null && availableStock <= 0;
   const atLimit = limit != null && inCart >= limit;
 
@@ -59,6 +61,7 @@ export default function AddToCartButton({
         maxStock: limit,
         availableStock,
         allowBackorder,
+        backorderLimit,
       });
       toast.success("Producto agregado al carrito");
     } catch {

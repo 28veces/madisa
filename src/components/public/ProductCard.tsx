@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useCartStore } from "@/stores/cartStore";
 import CoverImage from "@/components/public/CoverImage";
 import { getCategoryLabel, getTechniqueLabel } from "@/lib/whatsapp";
-import { formatCurrency, parseNumberField, type NumberField, MAX_ORDER_QUANTITY } from "@/lib/utils";
+import { formatCurrency, parseNumberField, type NumberField, DEFAULT_BACKORDER_LIMIT, orderLimit } from "@/lib/utils";
 
 interface ProductCardProps {
   id: string;
@@ -22,6 +22,7 @@ interface ProductCardProps {
   imageUrl?: string | null;
   availableStock?: number;
   allowBackorder?: boolean;
+  backorderLimit?: number;
 }
 
 export default function ProductCard({
@@ -35,6 +36,7 @@ export default function ProductCard({
   imageUrl,
   availableStock,
   allowBackorder = false,
+  backorderLimit = DEFAULT_BACKORDER_LIMIT,
 }: ProductCardProps) {
   const [customization, setCustomization] = useState("");
   const [quantity, setQuantity] = useState<NumberField>(1);
@@ -42,8 +44,8 @@ export default function ProductCard({
   const cartItems = useCartStore((s) => s.items);
 
   const inCart = cartItems.find((i) => i.productId === id)?.quantity ?? 0;
-  // Bajo pedido: el límite es el tope por artículo, no el stock (US-64)
-  const limit = availableStock == null ? undefined : allowBackorder ? MAX_ORDER_QUANTITY : availableStock;
+  // Bajo pedido: el límite es el stock más el tope de unidades sin stock (US-64, US-67)
+  const limit = orderLimit(availableStock, allowBackorder, backorderLimit);
   const remaining = limit != null ? limit - inCart : Infinity;
   const outOfStock = !allowBackorder && availableStock != null && availableStock <= 0;
   const atLimit = remaining <= 0;
@@ -65,6 +67,7 @@ export default function ProductCard({
       maxStock: limit,
       availableStock,
       allowBackorder,
+      backorderLimit,
     });
     toast.success(`${name} agregado al carrito`);
     setCustomization("");
@@ -137,8 +140,8 @@ export default function ProductCard({
                 <span className="ml-1 text-ink/70">
                   ({allowBackorder
                     ? availableStock > 0
-                      ? `${availableStock} disponibles · más bajo pedido`
-                      : "bajo pedido"
+                      ? `${availableStock} disponibles · hasta ${backorderLimit} más bajo pedido`
+                      : `hasta ${backorderLimit} bajo pedido`
                     : remaining > 0
                       ? `${remaining} disponibles`
                       : "sin stock"})

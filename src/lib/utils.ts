@@ -49,6 +49,16 @@ export function isOptimizableImage(src: string) {
   }
 }
 
-// Tope de unidades por artículo en un pedido del sitio público (US-53); también es el
-// límite del carrito para productos bajo pedido, que no se limitan al stock (US-64).
+// Tope de unidades por artículo en un pedido del sitio público (US-53).
 export const MAX_ORDER_QUANTITY = 100;
+
+// Unidades sin stock que acepta por defecto un pedido de un producto bajo pedido (US-67).
+export const DEFAULT_BACKORDER_LIMIT = 10;
+
+// Máximo que el carrito deja pedir de un producto: el stock, o en un producto bajo pedido
+// el stock más su tope de unidades sin stock (US-64, US-67). Sin inventario no hay límite.
+export function orderLimit(availableStock: number | undefined, allowBackorder: boolean, backorderLimit: number) {
+  if (availableStock == null) return undefined;
+  if (!allowBackorder) return availableStock;
+  return Math.min(Math.max(availableStock, 0) + backorderLimit, MAX_ORDER_QUANTITY);
+}
