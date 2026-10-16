@@ -21,7 +21,7 @@ import {
   UserCircle,
   PackageMinus,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, isOptimizableImage } from "@/lib/utils";
 import { signOut } from "next-auth/react";
 
 const navItems = [
@@ -53,7 +53,7 @@ export default function Sidebar() {
       >
         <div className="h-9 w-9 rounded-full overflow-hidden ring-2 ring-rose-500/50 bg-gradient-to-br from-rose-500 to-purple-600 flex items-center justify-center flex-shrink-0">
           {session?.user?.image ? (
-            <Image src={session.user.image} alt="" width={36} height={36} className="h-full w-full object-cover" />
+            <Image src={session.user.image} alt="" width={36} height={36} unoptimized={!isOptimizableImage(session.user.image)} className="h-full w-full object-cover" />
           ) : (
             <span className="text-xs font-semibold text-white">
               {(session?.user?.name || "?")

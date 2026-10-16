@@ -37,3 +37,14 @@ export function parseNumberField(value: string): NumberField {
 export function toNumber(value: NumberField): number {
   return value === "" ? 0 : value;
 }
+
+// El optimizador de imágenes solo acepta Vercel Blob y rutas locales (ver next.config.ts).
+// Una imagen de otro host (URL escrita a mano en un producto) se muestra sin optimizar.
+export function isOptimizableImage(src: string) {
+  if (src.startsWith("/")) return true;
+  try {
+    return new URL(src).hostname.endsWith(".public.blob.vercel-storage.com");
+  } catch {
+    return false;
+  }
+}

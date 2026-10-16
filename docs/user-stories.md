@@ -230,10 +230,13 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Verificado invocando las Server Actions como atacante (sesión del ADMIN de A con IDs de un negocio B): inversión con socio de B → "Socio no encontrado"; compra con producto de B → rechazada; edición de producto y de artículo interceptando la petición del formulario real para meter el artículo y el proveedor de B → rechazadas y sin cambios en la base. Control: el mismo ataque contra el código anterior sí guardaba los vínculos.
   - Bug corregido: los aportes de una inversión no se validaban con Zod (`contributionSchema` estaba definido pero no se usaba).
   `src/actions/investments.ts:parseContributions`, `src/actions/products.ts:isValidInventoryItem`, `src/actions/inventory-items.ts:areValidSuppliers`, `src/actions/purchases.ts:resolveItems`
-- **US-61** ⬜ Como dueño del negocio, quiero que la app envíe cabeceras de seguridad y que el optimizador de imágenes solo acepte orígenes conocidos, para evitar clickjacking y que usen el sitio como proxy de imágenes (hallazgos M3 y M4).
+- **US-61** ✅ Como dueño del negocio, quiero que la app envíe cabeceras de seguridad y que el optimizador de imágenes solo acepte orígenes conocidos, para evitar clickjacking y que usen el sitio como proxy de imágenes (hallazgos M3 y M4).
   - Criterio: las respuestas incluyen `X-Frame-Options: DENY` (o `frame-ancestors 'none'`), `X-Content-Type-Options: nosniff` y `Referrer-Policy: strict-origin-when-cross-origin`.
   - Criterio: `/_next/image` rechaza una URL de un host que no sea Vercel Blob ni uno de los usados por el catálogo actual.
   - Criterio: las imágenes del catálogo, de inventario y de perfil se siguen viendo en producción.
+  - Criterio (2026-10-15): el optimizador solo acepta `*.public.blob.vercel-storage.com` y rutas locales; como el formulario de producto permite escribir cualquier URL de imagen, las de otros hosts se muestran sin optimizar (`unoptimized`) en vez de romper la página.
+  - Verificado en local: las cuatro cabeceras están en las respuestas; `/_next/image` con `example.com` → 400 y con un host de Blob se acepta; el catálogo muestra una imagen externa directa y una local optimizada, sin errores; panel sin errores. Falta mirar las imágenes en producción después del despliegue.
+  `next.config.ts`, `src/lib/utils.ts:isOptimizableImage`
 
 ## Épico N — Usabilidad del panel
 

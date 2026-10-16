@@ -7,7 +7,7 @@ import { Trash2, ShoppingBag, MessageCircle, ImageIcon, Plus, Minus, Loader2, Se
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency, cn, isOptimizableImage } from "@/lib/utils";
 import { useState } from "react";
 import { createPublicOrder } from "@/actions/public-orders";
 import { toast } from "sonner";
@@ -115,7 +115,7 @@ export default function CarritoPage() {
           >
             <div className="relative w-20 h-20 flex-shrink-0 bg-gray-50 rounded-xl overflow-hidden">
               {item.imageUrl ? (
-                <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
+                <Image src={item.imageUrl} alt={item.name} fill unoptimized={!isOptimizableImage(item.imageUrl)} className="object-cover" />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-300">
                   <ImageIcon className="h-8 w-8" />

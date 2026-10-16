@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCartStore } from "@/stores/cartStore";
 import { getCategoryLabel, getTechniqueLabel } from "@/lib/whatsapp";
-import { formatCurrency, parseNumberField, type NumberField } from "@/lib/utils";
+import { formatCurrency, parseNumberField, type NumberField, isOptimizableImage } from "@/lib/utils";
 
 interface ProductCardProps {
   id: string;
@@ -73,6 +73,7 @@ export default function ProductCard({
         {imageUrl ? (
           <Image
             src={imageUrl}
+            unoptimized={!isOptimizableImage(imageUrl)}
             alt={name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
