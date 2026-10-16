@@ -156,15 +156,30 @@ export async function getProducts(category?: Category, activeOnly = false) {
   });
 }
 
-export async function getPublicProducts(category?: Category) {
+const publicProductsSchema = z.object({
+  category: z.nativeEnum(Category).optional(),
+  search: z.string().trim().max(100).optional(),
+});
+
+// Minúsculas y sin tildes, para que "lapida" encuentre "Lápida" (US-65)
+function normalizeText(text: string) {
+  return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+export async function getPublicProducts(category?: Category, search?: string) {
+  const parsed = publicProductsSchema.safeParse({ category, search });
+  if (!parsed.success) return [];
+
   const businessId = await getActiveBusinessId();
   if (!businessId) return [];
+
+  const term = parsed.data.search ? normalizeText(parsed.data.search) : "";
 
   const products = await prisma.product.findMany({
     where: {
       businessId,
       isActive: true,
-      ...(category ? { category } : {}),
+      ...(parsed.data.category ? { category: parsed.data.category } : {}),
     },
     include: {
       inventoryItem: {
@@ -175,6 +190,7 @@ export async function getPublicProducts(category?: Category) {
   });
 
   return products.filter((p) => {
+    if (term && !normalizeText(p.name).includes(term)) return false;
     if (!p.inventoryItemId) return true; // arreglos u otros sin inventario
     if (p.allowBackorder) return true; // bajo pedido: se muestra aunque no haya stock (US-64)
     return availableStock(p.inventoryItem!) > 0;

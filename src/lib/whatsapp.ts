@@ -37,6 +37,7 @@ export function getCategoryLabel(category: string): string {
     VASOS: "Vasos",
     TAZAS: "Tazas",
     SWEATERS: "Sweaters",
+    GORRAS: "Gorras",
     PLACAS: "Placas",
     LAPIDAS: "Lápidas",
     OTROS: "Otros",
@@ -51,6 +52,8 @@ export function getTechniqueLabel(technique: string): string {
     VINIL: "Vinil",
     BORDADO: "Bordado",
     GRABADO: "Grabado",
+    DTF: "DTF",
+    VDTF: "VDTF",
     OTRO: "Otro",
   };
   return labels[technique] ?? technique;

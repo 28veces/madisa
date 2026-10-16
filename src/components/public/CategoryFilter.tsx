@@ -1,19 +1,10 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { publicCategories } from "@/components/public/categories";
 
-const categories = [
-  { value: "", label: "Todos" },
-  { value: "PLATOS", label: "Platos" },
-  { value: "VASOS", label: "Vasos" },
-  { value: "TAZAS", label: "Tazas" },
-  { value: "SWEATERS", label: "Sweaters" },
-  { value: "PLACAS", label: "Placas" },
-  { value: "LAPIDAS", label: "Lápidas" },
-  { value: "OTROS", label: "Otros" },
-];
+const categories = [{ value: "", label: "Todos", emoji: "✨" }, ...publicCategories];
 
 export default function CategoryFilter({ active }: { active?: string }) {
   const router = useRouter();
@@ -31,26 +22,27 @@ export default function CategoryFilter({ active }: { active?: string }) {
   };
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {categories.map((cat) => (
-        <button
-          key={cat.value}
-          onClick={() => handleSelect(cat.value)}
-          className="focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-1 rounded-full"
-        >
-          <Badge
-            variant={active === cat.value || (!active && cat.value === "") ? "default" : "outline"}
+    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible">
+      {categories.map((cat) => {
+        const selected = active === cat.value || (!active && cat.value === "");
+        return (
+          <button
+            key={cat.value}
+            onClick={() => handleSelect(cat.value)}
+            aria-pressed={selected}
             className={cn(
-              "cursor-pointer px-3 py-1 text-sm transition-colors",
-              active === cat.value || (!active && cat.value === "")
-                ? "bg-rose-600 text-white hover:bg-rose-700"
-                : "hover:bg-rose-50 hover:border-rose-300"
+              "shrink-0 inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-violet focus-visible:ring-offset-2",
+              selected
+                ? "bg-violet border-violet text-white"
+                : "bg-white border-lavender-deep text-ink hover:border-violet hover:text-violet-deep"
             )}
           >
+            <span aria-hidden>{cat.emoji}</span>
             {cat.label}
-          </Badge>
-        </button>
-      ))}
+          </button>
+        );
+      })}
     </div>
   );
 }
