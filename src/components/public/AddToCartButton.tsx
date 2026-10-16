@@ -74,8 +74,8 @@ export default function AddToCartButton({
     <Button
       onClick={handleAddToCart}
       disabled={isDisabled}
-      className="w-full text-white"
-      style={{ background: isDisabled ? "#ccc" : "var(--color-teal)" }}
+      size="lg"
+      className="w-full h-12 rounded-full bg-violet text-base font-bold text-white hover:bg-violet-deep disabled:bg-ink/20 disabled:text-ink/50 disabled:opacity-100"
     >
       <ShoppingCart className="h-4 w-4 mr-2" />
       {outOfStock ? "Sin stock" : atLimit ? "Límite alcanzado" : "Agregar al carrito"}

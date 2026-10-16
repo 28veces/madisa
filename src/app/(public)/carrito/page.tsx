@@ -23,11 +23,13 @@ export default function CarritoPage() {
   if (items.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-        <ShoppingBag className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Tu carrito está vacío</h1>
-        <p className="text-gray-500 mb-6">Explora el catálogo y agrega artículos para cotizar.</p>
+        <span className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white text-violet-deep ring-1 ring-lavender-deep mb-5">
+          <ShoppingBag className="h-9 w-9" />
+        </span>
+        <h1 className="text-2xl font-extrabold text-ink mb-2">Tu carrito está vacío</h1>
+        <p className="text-ink/65 mb-6">Explora el catálogo y agrega artículos para cotizar.</p>
         <Link href="/catalogo">
-          <Button className="bg-rose-600 hover:bg-rose-700">Ir al catálogo</Button>
+          <Button className="h-11 rounded-full bg-violet px-6 font-bold text-white hover:bg-violet-deep">Ir al catálogo</Button>
         </Link>
       </div>
     );
@@ -98,10 +100,10 @@ export default function CarritoPage() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Mi carrito</h1>
+        <h1 className="text-3xl font-extrabold text-ink">Mi carrito</h1>
         <button
           onClick={clearCart}
-          className="text-sm text-red-500 hover:text-red-700 transition-colors"
+          className="text-sm font-semibold text-red-700 hover:text-red-800 transition-colors"
         >
           Vaciar carrito
         </button>
@@ -111,27 +113,27 @@ export default function CarritoPage() {
         {items.map((item) => (
           <div
             key={item.productId}
-            className="flex gap-4 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm"
+            className="flex gap-4 p-3 sm:p-4 bg-white rounded-3xl ring-1 ring-lavender-deep shadow-sm"
           >
-            <div className="relative w-20 h-20 flex-shrink-0 bg-gray-50 rounded-xl overflow-hidden">
+            <div className="relative w-20 h-20 flex-shrink-0 bg-lavender rounded-2xl overflow-hidden">
               {item.imageUrl ? (
                 <Image src={item.imageUrl} alt={item.name} fill unoptimized={!isOptimizableImage(item.imageUrl)} className="object-cover" />
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-300">
+                <div className="flex items-center justify-center h-full text-violet/40">
                   <ImageIcon className="h-8 w-8" />
                 </div>
               )}
             </div>
 
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 truncate">{item.name}</h3>
-              <p className="text-sm text-gray-500">{item.technique} · {item.material}</p>
+              <h3 className="font-bold text-ink truncate">{item.name}</h3>
+              <p className="text-sm text-ink/65">{item.technique} · {item.material}</p>
               {item.customization && (
-                <p className="text-xs text-rose-600 mt-0.5 italic">
+                <p className="text-xs text-violet-deep mt-0.5 italic">
                   &ldquo;{item.customization}&rdquo;
                 </p>
               )}
-              <p className="text-sm font-medium text-gray-700 mt-1">
+              <p className="text-sm font-medium text-ink/80 mt-1">
                 {formatCurrency(item.unitPrice)} c/u
               </p>
               {item.allowBackorder && item.availableStock != null && item.quantity > Math.max(item.availableStock, 0) && (
@@ -146,27 +148,30 @@ export default function CarritoPage() {
             <div className="flex flex-col items-end gap-2">
               <button
                 onClick={() => removeItem(item.productId)}
-                className="text-gray-400 hover:text-red-500 transition-colors"
+                aria-label={`Quitar ${item.name}`}
+                className="text-ink/70 hover:text-red-600 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                  className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  aria-label="Quitar uno"
+                  className="w-7 h-7 rounded-full bg-lavender text-ink flex items-center justify-center hover:bg-lavender-deep transition-colors"
                 >
                   <Minus className="h-3 w-3" />
                 </button>
-                <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
+                <span className="text-sm font-bold text-ink w-6 text-center">{item.quantity}</span>
                 <button
                   onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                   disabled={item.maxStock != null && item.quantity >= item.maxStock}
-                  className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Agregar uno"
+                  className="w-7 h-7 rounded-full bg-lavender text-ink flex items-center justify-center hover:bg-lavender-deep transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Plus className="h-3 w-3" />
                 </button>
               </div>
-              <p className="text-sm font-bold text-gray-900">
+              <p className="text-sm font-extrabold text-ink">
                 {formatCurrency(item.quantity * item.unitPrice)}
               </p>
             </div>
@@ -174,16 +179,16 @@ export default function CarritoPage() {
         ))}
       </div>
 
-      <div className="bg-gray-50 rounded-2xl p-5 space-y-3">
-        <div className="flex justify-between text-sm text-gray-600">
+      <div className="bg-white rounded-3xl ring-1 ring-lavender-deep p-5 space-y-3">
+        <div className="flex justify-between text-sm text-ink/70">
           <span>Subtotal ({items.reduce((s, i) => s + i.quantity, 0)} artículos)</span>
           <span>{formatCurrency(totalPrice())}</span>
         </div>
-        <div className="flex justify-between font-bold text-gray-900 border-t pt-3">
+        <div className="flex justify-between font-bold text-ink border-t border-lavender-deep pt-3">
           <span>Total estimado</span>
-          <span className="text-rose-600 text-lg">{formatCurrency(totalPrice())}</span>
+          <span className="text-violet-deep text-xl font-extrabold">{formatCurrency(totalPrice())}</span>
         </div>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-ink/70">
           * El precio final puede variar según la complejidad del diseño.
         </p>
       </div>
@@ -193,7 +198,7 @@ export default function CarritoPage() {
           <Button
             onClick={() => setShowForm(true)}
             size="lg"
-            className="w-full bg-rose-600 hover:bg-rose-700 text-white text-base font-semibold shadow-lg flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-full bg-violet hover:bg-violet-deep text-white text-base font-bold shadow-lg shadow-violet/20 flex items-center justify-center gap-2"
           >
             <Send className="h-5 w-5" />
             Enviar pedido
@@ -202,7 +207,7 @@ export default function CarritoPage() {
             <Button
               size="lg"
               className={cn(
-                "w-full bg-green-500 hover:bg-green-600 text-white text-base font-semibold shadow-lg",
+                "w-full h-12 rounded-full bg-green-700 hover:bg-green-800 text-white text-base font-bold",
                 "flex items-center gap-2"
               )}
             >
@@ -211,15 +216,15 @@ export default function CarritoPage() {
             </Button>
           </a>
           <Link href="/catalogo">
-            <Button variant="outline" size="lg" className="w-full">
+            <Button variant="outline" size="lg" className="w-full h-12 rounded-full border-2 border-ink bg-transparent text-ink font-bold hover:bg-ink hover:text-white">
               Seguir comprando
             </Button>
           </Link>
         </div>
       ) : (
-        <form onSubmit={handleSubmitOrder} className="mt-6 p-5 bg-white rounded-2xl border border-gray-100 space-y-4">
+        <form onSubmit={handleSubmitOrder} className="mt-6 p-5 bg-white rounded-3xl ring-1 ring-lavender-deep space-y-4">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="name" className="block text-sm font-semibold text-ink mb-1">
               Tu nombre
             </label>
             <input
@@ -228,12 +233,12 @@ export default function CarritoPage() {
               value={clientName}
               onChange={(e) => setClientName(e.target.value)}
               placeholder="Ej: Juan Pérez"
-              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+              className="w-full h-11 px-4 rounded-full bg-lavender border border-transparent text-ink focus:outline-none focus:bg-white focus:ring-2 focus:ring-violet/40 focus:border-violet"
             />
           </div>
 
           <div>
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="phone" className="block text-sm font-semibold text-ink mb-1">
               Tu teléfono
             </label>
             <input
@@ -242,7 +247,7 @@ export default function CarritoPage() {
               value={clientPhone}
               onChange={(e) => setClientPhone(e.target.value)}
               placeholder="Ej: +507 6000-0000"
-              className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-transparent"
+              className="w-full h-11 px-4 rounded-full bg-lavender border border-transparent text-ink focus:outline-none focus:bg-white focus:ring-2 focus:ring-violet/40 focus:border-violet"
             />
           </div>
 
@@ -250,7 +255,7 @@ export default function CarritoPage() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold"
+              className="w-full h-12 rounded-full bg-violet hover:bg-violet-deep text-white font-bold"
               size="lg"
             >
               {isSubmitting ? (
@@ -269,14 +274,14 @@ export default function CarritoPage() {
               type="button"
               onClick={() => setShowForm(false)}
               variant="outline"
-              className="w-full"
+              className="w-full h-12 rounded-full border-2 border-ink bg-transparent text-ink font-bold hover:bg-ink hover:text-white"
               size="lg"
             >
               Cancelar
             </Button>
           </div>
 
-          <p className="text-xs text-gray-400 text-center">
+          <p className="text-xs text-ink/70 text-center">
             Al enviar tu pedido, nuestro equipo lo revisará y se pondrá en contacto contigo.
           </p>
         </form>

@@ -46,6 +46,15 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Paleta del sitio público (US-65): bg-lavender, text-ink, bg-violet, bg-coral, bg-sun... */
+  --color-lavender: #F7F4FF;
+  --color-lavender-deep: #EDE7FC;
+  --color-violet: #805AD5;
+  --color-violet-deep: #6B46C1;
+  --color-coral: #FF8066;
+  --color-coral-deep: #F2664A;
+  --color-sun: #FFD166;
+  --color-ink: #28243D;
 }
 
 :root {
@@ -81,10 +90,6 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  /* Arte Madisa colors */
-  --color-teal: #0D9488;
-  --color-dark: #0F172A;
-  --color-orange: #F97316;
 }
 
 .dark {

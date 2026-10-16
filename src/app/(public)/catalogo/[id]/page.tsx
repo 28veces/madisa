@@ -2,27 +2,24 @@ export const dynamic = "force-dynamic";
 
 import { getPublicProduct } from "@/actions/products";
 import { availableStock } from "@/lib/stock";
-import { useCartStore } from "@/stores/cartStore";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ShoppingCart } from "lucide-react";
+import { ArrowLeft, ImageIcon, MessageCircle, Truck, Sparkles } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { getCategoryLabel, getTechniqueLabel } from "@/lib/whatsapp";
 import AddToCartButton from "@/components/public/AddToCartButton";
-
-const techniqueLabels: Record<string, string> = {
-  SUBLIMACION: "Sublimación",
-  PINTADO_A_MANO: "Pintura a mano",
-  VINIL: "Vinil",
-  BORDADO: "Bordado",
-  GRABADO: "Grabado",
-  DTF: "DTF",
-  VDTF: "VDTF",
-  OTRO: "Otro",
-};
+import CoverImage from "@/components/public/CoverImage";
 
 interface Props {
   params: Promise<{ id: string }>;
+}
+
+function BackLink() {
+  return (
+    <Link href="/catalogo" className="inline-flex items-center gap-2 text-sm font-bold text-violet-deep hover:underline mb-6">
+      <ArrowLeft className="h-4 w-4" />
+      Volver al catálogo
+    </Link>
+  );
 }
 
 export default async function ProductDetailPage({ params }: Props) {
@@ -34,94 +31,87 @@ export default async function ProductDetailPage({ params }: Props) {
   if (!product) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <Link href="/catalogo" className="inline-flex items-center gap-2 text-sm mb-4" style={{ color: "var(--color-teal)" }}>
-          <ArrowLeft className="h-4 w-4" />
-          Volver al catálogo
-        </Link>
-        <div className="text-center py-16">
-          <p className="text-gray-500">Producto no encontrado</p>
+        <BackLink />
+        <div className="text-center py-16 rounded-3xl bg-white ring-1 ring-lavender-deep">
+          <p className="text-4xl mb-3">🔎</p>
+          <p className="font-bold text-ink">Producto no encontrado</p>
         </div>
       </div>
     );
   }
 
   const displayImageUrl = product.imageUrl ?? product.inventoryItem?.imageUrl;
+  const stock = product.inventoryItem ? availableStock(product.inventoryItem) : undefined;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <Link href="/catalogo" className="inline-flex items-center gap-2 text-sm mb-8" style={{ color: "var(--color-teal)" }}>
-        <ArrowLeft className="h-4 w-4" />
-        Volver al catálogo
-      </Link>
+      <BackLink />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-14 rounded-[2rem] bg-white p-4 sm:p-8 ring-1 ring-lavender-deep">
         {/* Imagen */}
-        <div className="flex items-center justify-center bg-gray-100 rounded-2xl aspect-square">
-          {displayImageUrl ? (
-            <img
-              src={displayImageUrl}
-              alt={product.name}
-              className="w-full h-full object-cover rounded-2xl"
-            />
-          ) : (
-            <div className="flex flex-col items-center gap-2 text-gray-400">
-              <div className="text-6xl">📦</div>
-              <p className="text-sm">Sin imagen</p>
-            </div>
-          )}
+        <div className="relative flex items-center justify-center overflow-hidden rounded-3xl bg-lavender aspect-square">
+          {(() => {
+            const placeholder = (
+              <div className="flex flex-col items-center gap-2 text-violet/50">
+                <ImageIcon className="h-20 w-20" />
+                <p className="text-sm font-medium text-ink/70">Sin imagen</p>
+              </div>
+            );
+            if (!displayImageUrl) return placeholder;
+            return (
+              <CoverImage
+                src={displayImageUrl}
+                alt={product.name}
+                sizes="(min-width: 768px) 50vw, 100vw"
+                className="object-cover"
+                fallback={placeholder}
+              />
+            );
+          })()}
         </div>
 
         {/* Información */}
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6 md:py-4">
           <div>
-            <Badge style={{ background: "rgba(13, 148, 136, 0.1)", color: "var(--color-teal)" }}>
-              {techniqueLabels[product.technique] || product.technique}
-            </Badge>
-            <h1 className="text-3xl font-bold mt-3" style={{ color: "var(--color-dark)" }}>
-              {product.name}
-            </h1>
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-full bg-lavender px-3 py-1 text-xs font-bold text-violet-deep">
+                {getTechniqueLabel(product.technique)}
+              </span>
+              <span className="rounded-full bg-lavender px-3 py-1 text-xs font-bold text-ink/75">
+                {getCategoryLabel(product.category)}
+              </span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-ink mt-4">{product.name}</h1>
             {product.description && (
-              <p className="text-gray-600 mt-2">{product.description}</p>
+              <p className="text-ink/70 mt-3 leading-relaxed">{product.description}</p>
             )}
           </div>
 
-          {/* Precio */}
-          <div className="border-t border-b py-4">
-            <p className="text-sm text-gray-500 mb-1">Precio base</p>
-            <p className="text-4xl font-bold" style={{ color: "var(--color-teal)" }}>
-              {formatCurrency(Number(product.basePrice))}
-            </p>
+          <div className="border-y border-lavender-deep py-5">
+            <p className="text-sm text-ink/70 mb-1">Precio base</p>
+            <p className="text-4xl font-extrabold text-ink">{formatCurrency(Number(product.basePrice))}</p>
           </div>
 
-          {/* Detalles */}
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Categoría:</span>
-              <span className="font-medium text-gray-900">{product.category}</span>
-            </div>
+          <dl className="space-y-3 text-sm">
             {product.material && (
-              <div className="flex justify-between">
-                <span className="text-gray-600">Material:</span>
-                <span className="font-medium text-gray-900">{product.material}</span>
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink/65">Material</dt>
+                <dd className="font-semibold text-ink text-right">{product.material}</dd>
               </div>
             )}
-            {product.inventoryItem && (() => {
-              const stock = availableStock(product.inventoryItem);
-              return (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Disponibilidad:</span>
-                  <span className={`font-medium ${stock > 0 ? "text-green-600" : product.allowBackorder ? "text-amber-600" : "text-red-600"}`}>
-                    {stock > 0
-                      ? product.allowBackorder ? `${stock} disponibles · más bajo pedido` : "Disponible"
-                      : product.allowBackorder ? "Bajo pedido" : "Sin stock"}
-                  </span>
-                </div>
-              );
-            })()}
-          </div>
+            {stock != null && (
+              <div className="flex justify-between gap-4">
+                <dt className="text-ink/65">Disponibilidad</dt>
+                <dd className={`font-semibold text-right ${stock > 0 ? "text-green-700" : product.allowBackorder ? "text-amber-700" : "text-red-700"}`}>
+                  {stock > 0
+                    ? product.allowBackorder ? `${stock} disponibles · más bajo pedido` : "Disponible"
+                    : product.allowBackorder ? "Bajo pedido" : "Sin stock"}
+                </dd>
+              </div>
+            )}
+          </dl>
 
-          {/* CTA */}
-          <div className="space-y-3 pt-4">
+          <div className="space-y-3">
             <AddToCartButton
               productId={product.id}
               productName={product.name}
@@ -129,23 +119,28 @@ export default async function ProductDetailPage({ params }: Props) {
               category={product.category}
               technique={product.technique}
               material={product.material || ""}
-              availableStock={
-                product.inventoryItem
-                  ? availableStock(product.inventoryItem)
-                  : undefined
-              }
+              availableStock={stock}
               allowBackorder={product.allowBackorder}
             />
             <a
               href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "50760000000"}?text=${encodeURIComponent(`Hola! Quiero hacer un pedido de: ${product.name}`)}`}
               target="_blank"
               rel="noopener noreferrer"
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-full border-2 border-ink text-base font-bold text-ink transition-colors hover:bg-ink hover:text-white"
             >
-              <Button variant="outline" className="w-full border-gray-300">
-                Consultar por WhatsApp
-              </Button>
+              <MessageCircle className="h-5 w-5" />
+              Consultar por WhatsApp
             </a>
           </div>
+
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <li className="flex items-center gap-2 rounded-2xl bg-lavender p-3 text-ink/80">
+              <Truck className="h-5 w-5 shrink-0 text-violet-deep" /> Envíos en todo Panamá
+            </li>
+            <li className="flex items-center gap-2 rounded-2xl bg-lavender p-3 text-ink/80">
+              <Sparkles className="h-5 w-5 shrink-0 text-violet-deep" /> Personalizado a tu gusto
+            </li>
+          </ul>
         </div>
       </div>
     </div>
