@@ -22,6 +22,15 @@ const contributionSchema = z.object({
 
 export type ContributionInput = z.infer<typeof contributionSchema>;
 
+// Los socios de los aportes deben ser del negocio de la sesión.
+async function parseContributions(businessId: string, contributions: ContributionInput[]) {
+  const parsed = z.array(contributionSchema).parse(contributions);
+  const partnerIds = [...new Set(parsed.map((c) => c.partnerId))];
+  const found = await prisma.partner.count({ where: { id: { in: partnerIds }, businessId } });
+  if (found !== partnerIds.length) throw new Error("Socio no encontrado");
+  return parsed;
+}
+
 export async function createInvestment(
   formData: InvestmentFormData,
   contributions: ContributionInput[] = []
@@ -30,14 +39,15 @@ export async function createInvestment(
 
   try {
     const parsed = investmentSchema.parse(formData);
+    const validContributions = await parseContributions(businessId, contributions);
 
     const investment = await prisma.investment.create({
       data: {
         ...parsed,
         businessId,
         purchaseDate: new Date(parsed.purchaseDate),
-        contributions: contributions.length
-          ? { create: contributions.map((c) => ({ partnerId: c.partnerId, amount: c.amount })) }
+        contributions: validContributions.length
+          ? { create: validContributions.map((c) => ({ partnerId: c.partnerId, amount: c.amount })) }
           : undefined,
       },
     });
@@ -63,6 +73,7 @@ export async function updateInvestment(
 
     const investment = await prisma.investment.findFirst({ where: { id, businessId } });
     if (!investment) return { success: false, message: "Inversión no encontrada" };
+    const validContributions = await parseContributions(businessId, contributions);
 
     const updated = await prisma.$transaction([
       prisma.investmentContribution.deleteMany({ where: { investmentId: id } }),
@@ -71,8 +82,8 @@ export async function updateInvestment(
         data: {
           ...parsed,
           purchaseDate: new Date(parsed.purchaseDate),
-          contributions: contributions.length
-            ? { create: contributions.map((c) => ({ partnerId: c.partnerId, amount: c.amount })) }
+          contributions: validContributions.length
+            ? { create: validContributions.map((c) => ({ partnerId: c.partnerId, amount: c.amount })) }
             : undefined,
         },
       }),

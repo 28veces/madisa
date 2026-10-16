@@ -21,6 +21,13 @@ const productSchema = z.object({
   isActive: z.boolean().default(true),
 });
 
+// El artículo de inventario vinculado, si viene, debe ser del negocio de la sesión.
+async function isValidInventoryItem(businessId: string, inventoryItemId: string | undefined) {
+  if (!inventoryItemId) return true;
+  const item = await prisma.inventoryItem.findFirst({ where: { id: inventoryItemId, businessId }, select: { id: true } });
+  return !!item;
+}
+
 export async function createProduct(formData: FormData) {
   const { businessId } = await requireBusiness([UserRole.ADMIN, UserRole.SECRETARY]);
   const parsed = productSchema.safeParse({
@@ -37,6 +44,9 @@ export async function createProduct(formData: FormData) {
 
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
+  }
+  if (!(await isValidInventoryItem(businessId, parsed.data.inventoryItemId || undefined))) {
+    return { error: { inventoryItemId: ["Artículo de inventario no encontrado"] } };
   }
 
   const photo = formData.get("photo") as File | null;
@@ -78,6 +88,9 @@ export async function updateProduct(id: string, formData: FormData) {
 
   if (!parsed.success) {
     return { error: parsed.error.flatten().fieldErrors };
+  }
+  if (!(await isValidInventoryItem(businessId, parsed.data.inventoryItemId || undefined))) {
+    return { error: { inventoryItemId: ["Artículo de inventario no encontrado"] } };
   }
 
   const photo = formData.get("photo") as File | null;

@@ -25,6 +25,14 @@ async function generateCode(): Promise<string> {
   return `ART-${String(num).padStart(3, "0")}`;
 }
 
+// Los proveedores asociados deben ser del negocio de la sesión.
+async function areValidSuppliers(businessId: string, supplierIds: string[]) {
+  const ids = [...new Set(supplierIds)];
+  if (ids.length === 0) return true;
+  const found = await prisma.supplier.count({ where: { id: { in: ids }, businessId } });
+  return found === ids.length;
+}
+
 export async function createInventoryItem(formData: FormData) {
   const { businessId } = await requireBusiness([UserRole.ADMIN, UserRole.SECRETARY]);
   const supplierIdsRaw = formData.getAll("supplierIds");
@@ -41,6 +49,9 @@ export async function createInventoryItem(formData: FormData) {
     console.error("Validation error:", parsed.error.flatten().fieldErrors);
     console.error("Data received:", data);
     return { error: parsed.error.flatten().fieldErrors };
+  }
+  if (!(await areValidSuppliers(businessId, parsed.data.supplierIds))) {
+    return { error: { supplierIds: ["Proveedor no encontrado"] } };
   }
 
   const code = await generateCode();
@@ -97,6 +108,9 @@ export async function updateInventoryItem(id: string, formData: FormData) {
     console.error("Validation error:", parsed.error.flatten().fieldErrors);
     console.error("Data received:", data);
     return { error: parsed.error.flatten().fieldErrors };
+  }
+  if (!(await areValidSuppliers(businessId, parsed.data.supplierIds))) {
+    return { error: { supplierIds: ["Proveedor no encontrado"] } };
   }
 
   let imageUrl: string | undefined;

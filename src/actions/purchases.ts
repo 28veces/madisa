@@ -38,6 +38,14 @@ async function resolveItems(
     select: { id: true, description: true },
   });
   if (found.length !== ids.length) return null;
+
+  // El producto opcional de cada ítem también debe ser del negocio.
+  const productIds = [...new Set(items.flatMap((i) => (i.productId ? [i.productId] : [])))];
+  if (productIds.length > 0) {
+    const products = await prisma.product.count({ where: { id: { in: productIds }, businessId } });
+    if (products !== productIds.length) return null;
+  }
+
   const byId = new Map(found.map((f) => [f.id, f.description]));
   return items.map((i) => ({ ...i, description: byId.get(i.inventoryItemId)! }));
 }

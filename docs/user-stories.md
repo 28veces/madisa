@@ -222,11 +222,14 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio (2026-10-15): el bloqueo dura hasta que los fallos salen de la ventana de 15 minutos (los intentos durante el bloqueo no lo alargan); el email se compara sin distinguir mayúsculas. El registro es una línea JSON por `console.warn` (`login_fallido`, `login_bloqueado`), visible en los logs de Vercel.
   - Verificado con Playwright: 3 fallos y luego correcta entra y reinicia el contador; 5 fallos bloquean incluso con la contraseña correcta y con el email en mayúsculas; email inexistente da el mismo mensaje; otro usuario no se afecta; al vencer la ventana vuelve a entrar.
   `src/lib/auth.ts:authorize`, `src/lib/rate-limit.ts:isRateLimited`
-- **US-60** ⬜ Como dueño del negocio, quiero que ningún usuario de otro negocio pueda vincular mis socios, artículos, proveedores o productos a sus registros, para que mis datos no se vean ni se alteren desde otro negocio (hallazgos A4, A5, A6 y M1).
+- **US-60** ✅ Como dueño del negocio, quiero que ningún usuario de otro negocio pueda vincular mis socios, artículos, proveedores o productos a sus registros, para que mis datos no se vean ni se alteren desde otro negocio (hallazgos A4, A5, A6 y M1).
   - Criterio: crear o editar una inversión con un aporte de un socio de otro negocio se rechaza con "Socio no encontrado".
   - Criterio: crear o editar un producto vinculado a un artículo de inventario de otro negocio se rechaza.
   - Criterio: crear o editar un artículo con un proveedor de otro negocio se rechaza.
   - Criterio: crear o editar una compra con un ítem que apunta a un producto de otro negocio se rechaza.
+  - Verificado invocando las Server Actions como atacante (sesión del ADMIN de A con IDs de un negocio B): inversión con socio de B → "Socio no encontrado"; compra con producto de B → rechazada; edición de producto y de artículo interceptando la petición del formulario real para meter el artículo y el proveedor de B → rechazadas y sin cambios en la base. Control: el mismo ataque contra el código anterior sí guardaba los vínculos.
+  - Bug corregido: los aportes de una inversión no se validaban con Zod (`contributionSchema` estaba definido pero no se usaba).
+  `src/actions/investments.ts:parseContributions`, `src/actions/products.ts:isValidInventoryItem`, `src/actions/inventory-items.ts:areValidSuppliers`, `src/actions/purchases.ts:resolveItems`
 - **US-61** ⬜ Como dueño del negocio, quiero que la app envíe cabeceras de seguridad y que el optimizador de imágenes solo acepte orígenes conocidos, para evitar clickjacking y que usen el sitio como proxy de imágenes (hallazgos M3 y M4).
   - Criterio: las respuestas incluyen `X-Frame-Options: DENY` (o `frame-ancestors 'none'`), `X-Content-Type-Options: nosniff` y `Referrer-Policy: strict-origin-when-cross-origin`.
   - Criterio: `/_next/image` rechaza una URL de un host que no sea Vercel Blob ni uno de los usados por el catálogo actual.
