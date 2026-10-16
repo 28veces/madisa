@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import DeletePurchaseButton from "./DeletePurchaseButton";
 
 interface Purchase {
   id: string;
@@ -16,11 +17,13 @@ interface Purchase {
   category: string;
   purchaseDate: string | Date;
   supplier: { name: string } | null;
+  items: { id: string; description: string; quantity: number }[];
 }
 
 interface Props {
   purchases: Purchase[];
   totalGastado: number;
+  canDelete: boolean;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -31,8 +34,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const PAGE_SIZE = 10;
+// Líneas de artículos que se muestran por compra antes de resumir con "+N más"
+const MAX_ITEMS_SHOWN = 3;
 
-export default function ComprasContent({ purchases, totalGastado }: Props) {
+export default function ComprasContent({ purchases, totalGastado, canDelete }: Props) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
@@ -42,6 +47,7 @@ export default function ComprasContent({ purchases, totalGastado }: Props) {
     return purchases.filter(
       (p) =>
         p.description.toLowerCase().includes(q) ||
+        p.items.some((i) => i.description.toLowerCase().includes(q)) ||
         (p.supplier?.name ?? "").toLowerCase().includes(q) ||
         (p.notes ?? "").toLowerCase().includes(q)
     );
@@ -82,7 +88,7 @@ export default function ComprasContent({ purchases, totalGastado }: Props) {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
-          placeholder="Buscar por descripción, proveedor o notas..."
+          placeholder="Buscar por artículo, proveedor o notas..."
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
           className="pl-10"
@@ -94,7 +100,7 @@ export default function ComprasContent({ purchases, totalGastado }: Props) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50">
-                <th className="text-left py-3 px-4 font-medium text-gray-600">Descripción</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-600">Artículos</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Proveedor</th>
                 <th className="text-center py-3 px-4 font-medium text-gray-600">Categoría</th>
                 <th className="text-right py-3 px-4 font-medium text-gray-600">Total</th>
@@ -113,7 +119,23 @@ export default function ComprasContent({ purchases, totalGastado }: Props) {
               {paginated.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="py-3 px-4">
-                    <p className="font-medium text-gray-900">{p.description}</p>
+                    {p.items.length === 0 ? (
+                      <p className="font-medium text-gray-900">{p.description}</p>
+                    ) : (
+                      <ul className="space-y-0.5">
+                        {p.items.slice(0, MAX_ITEMS_SHOWN).map((item) => (
+                          <li key={item.id} className="font-medium text-gray-900">
+                            {item.description}{" "}
+                            <span className="text-gray-400 font-normal">×{item.quantity}</span>
+                          </li>
+                        ))}
+                        {p.items.length > MAX_ITEMS_SHOWN && (
+                          <li className="text-xs text-gray-500">
+                            +{p.items.length - MAX_ITEMS_SHOWN} más
+                          </li>
+                        )}
+                      </ul>
+                    )}
                     {p.notes && <p className="text-xs text-gray-400">{p.notes}</p>}
                   </td>
                   <td className="py-3 px-4 text-gray-500">{p.supplier?.name ?? "—"}</td>
@@ -129,11 +151,19 @@ export default function ComprasContent({ purchases, totalGastado }: Props) {
                     {formatDate(p.purchaseDate)}
                   </td>
                   <td className="py-3 px-4 text-right">
-                    <Link href={`/admin/compras/${p.id}`}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link href={`/admin/compras/${p.id}`}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-700">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      {canDelete && (
+                        <DeletePurchaseButton
+                          id={p.id}
+                          label={p.items.length ? p.items.map((i) => i.description).join(", ") : p.description}
+                        />
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

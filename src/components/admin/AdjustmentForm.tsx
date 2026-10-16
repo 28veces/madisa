@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createAdjustment } from "@/actions/inventory-adjustments";
+import { createAdjustment, updateAdjustment } from "@/actions/inventory-adjustments";
+import { parseNumberField, type NumberField } from "@/lib/utils";
 import { ADJUSTMENT_REASONS, AdjustmentReasonValue } from "@/lib/adjustment-reasons";
 
 interface Item {
@@ -17,24 +18,45 @@ interface Item {
   availableStock: number;
 }
 
+interface InitialData {
+  inventoryItemId: string;
+  quantity: number;
+  reason: AdjustmentReasonValue;
+  date: string; // AAAA-MM-DD
+  note: string | null;
+}
+
 interface Props {
   items: Item[];
   initialItemId?: string;
+  // Si viene, el formulario edita esa salida en vez de crear una nueva
+  adjustmentId?: string;
+  initialData?: InitialData;
 }
 
-export default function AdjustmentForm({ items, initialItemId }: Props) {
+export default function AdjustmentForm({ items: rawItems, initialItemId, adjustmentId, initialData }: Props) {
   const router = useRouter();
-  const initialItem = items.find((it) => it.id === initialItemId);
+  const isEditing = !!adjustmentId;
+  // Al editar, las unidades de esta misma salida vuelven a estar disponibles para su artículo
+  const items = initialData
+    ? rawItems.map((it) =>
+        it.id === initialData.inventoryItemId
+          ? { ...it, availableStock: it.availableStock + initialData.quantity }
+          : it
+      )
+    : rawItems;
+  const initialItem = items.find((it) => it.id === (initialData?.inventoryItemId ?? initialItemId));
 
   const [selected, setSelected] = useState<Item | undefined>(initialItem);
   const [search, setSearch] = useState(initialItem ? `${initialItem.code} - ${initialItem.description}` : "");
   const [searchOpen, setSearchOpen] = useState(false);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<NumberField>(initialData?.quantity ?? 1);
   const [reason, setReason] = useState<AdjustmentReasonValue>(
-    initialItem?.category === "INSUMO" || !initialItem ? "CONSUMPTION" : "DAMAGE"
+    initialData?.reason ??
+      (initialItem?.category === "INSUMO" || !initialItem ? "CONSUMPTION" : "DAMAGE")
   );
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [note, setNote] = useState("");
+  const [date, setDate] = useState(initialData?.date ?? new Date().toISOString().split("T")[0]);
+  const [note, setNote] = useState(initialData?.note ?? "");
   const [loading, setLoading] = useState(false);
 
   const q = search.toLowerCase();
@@ -45,22 +67,34 @@ export default function AdjustmentForm({ items, initialItemId }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selected) return toast.error("Selecciona de la lista el artículo");
+    if (quantity === "" || quantity < 1 || !Number.isInteger(quantity)) {
+      return toast.error("La cantidad debe ser un número entero mayor que 0");
+    }
     if (quantity > selected.availableStock) {
       return toast.error(`Solo hay ${selected.availableStock} disponibles de ${selected.description}`);
     }
 
     setLoading(true);
-    const result = await createAdjustment({
+    const payload = {
       inventoryItemId: selected.id,
       quantity,
       reason,
       date: new Date(date),
       note: note || undefined,
-    });
-    setLoading(false);
+    };
+    let result: { error?: string; success?: boolean };
+    try {
+      result = isEditing
+        ? await updateAdjustment(adjustmentId, payload)
+        : await createAdjustment(payload);
+    } catch {
+      result = { error: "No tienes permiso para guardar salidas" };
+    } finally {
+      setLoading(false);
+    }
 
     if (result?.error) return toast.error(result.error);
-    toast.success("Salida registrada");
+    toast.success(isEditing ? "Salida actualizada" : "Salida registrada");
     router.push("/admin/salidas");
   };
 
@@ -123,7 +157,7 @@ export default function AdjustmentForm({ items, initialItemId }: Props) {
             min={1}
             max={selected?.availableStock}
             value={quantity}
-            onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+            onChange={(e) => setQuantity(parseNumberField(e.target.value))}
             className="mt-1"
           />
         </div>
@@ -173,7 +207,7 @@ export default function AdjustmentForm({ items, initialItemId }: Props) {
 
       <div className="flex gap-3">
         <Button type="submit" disabled={loading} className="bg-rose-600 hover:bg-rose-700">
-          {loading ? "Guardando..." : "Registrar salida"}
+          {loading ? "Guardando..." : isEditing ? "Guardar cambios" : "Registrar salida"}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancelar

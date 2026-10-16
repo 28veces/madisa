@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createSale } from "@/actions/sales";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, parseNumberField, toNumber, type NumberField } from "@/lib/utils";
 
 interface ItemForSale {
   id: string;
@@ -29,10 +29,10 @@ interface ItemForSale {
 interface SaleLineItem {
   inventoryItemId: string;
   description: string;
-  quantity: number;
-  unitPrice: number;
-  productionCost: number;
-  extraCost: number;
+  quantity: NumberField;
+  unitPrice: NumberField;
+  productionCost: NumberField;
+  extraCost: NumberField;
   // true cuando el usuario escribió el costo a mano; entonces ya no se recalcula solo
   costEdited: boolean;
   customization: string;
@@ -72,15 +72,15 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
 
   const removeLine = (i: number) => setLines(lines.filter((_, idx) => idx !== i));
 
-  const updateLine = (i: number, field: keyof SaleLineItem, value: string | number) => {
+  const updateLine = (i: number, field: keyof SaleLineItem, value: string | NumberField) => {
     setLines(lines.map((line, idx) => (idx === i ? { ...line, [field]: value } : line)));
   };
 
   // Costo sugerido: cantidad × costo promedio de compra del artículo
-  const autoCost = (item: ItemForSale | undefined, quantity: number) =>
-    item ? Math.round(item.avgUnitCost * quantity * 100) / 100 : 0;
+  const autoCost = (item: ItemForSale | undefined, quantity: NumberField) =>
+    item ? Math.round(item.avgUnitCost * toNumber(quantity) * 100) / 100 : 0;
 
-  const updateQuantity = (i: number, quantity: number) => {
+  const updateQuantity = (i: number, quantity: NumberField) => {
     setLines(
       lines.map((line, idx) =>
         idx === i
@@ -116,21 +116,27 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
   const getSelectedItem = (line: SaleLineItem) =>
     allItems.find((item) => item.id === line.inventoryItemId);
 
-  const total = lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
-  const totalCompra = lines.reduce((sum, line) => sum + line.productionCost, 0);
-  const totalProduccion = lines.reduce((sum, line) => sum + line.extraCost, 0);
+  const total = lines.reduce((sum, line) => sum + toNumber(line.quantity) * toNumber(line.unitPrice), 0);
+  const totalCompra = lines.reduce((sum, line) => sum + toNumber(line.productionCost), 0);
+  const totalProduccion = lines.reduce((sum, line) => sum + toNumber(line.extraCost), 0);
   const gananciaNeta = total - totalCompra - totalProduccion;
   const lineGanancia = (line: SaleLineItem) =>
-    line.quantity * line.unitPrice - line.productionCost - line.extraCost;
+    toNumber(line.quantity) * toNumber(line.unitPrice) - toNumber(line.productionCost) - toNumber(line.extraCost);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientName.trim()) return toast.error("Nombre del cliente requerido");
     if (lines.some((l) => !l.inventoryItemId)) return toast.error("Selecciona un producto en cada línea");
+    if (lines.some((l) => l.quantity === "" || l.quantity < 1 || !Number.isInteger(l.quantity))) {
+      return toast.error("La cantidad de cada línea debe ser un número entero mayor que 0");
+    }
+    if (lines.some((l) => l.unitPrice === "" || l.unitPrice < 0)) {
+      return toast.error("Escribe el precio unitario de cada línea");
+    }
 
     for (const line of lines) {
       const item = getSelectedItem(line);
-      if (item && item.availableStock < line.quantity) {
+      if (item && item.availableStock < toNumber(line.quantity)) {
         return toast.error(`No hay inventario: ${item.description} (disponible: ${item.availableStock})`);
       }
     }
@@ -144,10 +150,10 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
       businessLine: businessLine as never,
       items: lines.map(({ inventoryItemId, quantity, unitPrice, productionCost, extraCost, customization }) => ({
         inventoryItemId,
-        quantity,
-        unitPrice,
-        productionCost,
-        extraCost,
+        quantity: toNumber(quantity),
+        unitPrice: toNumber(unitPrice),
+        productionCost: toNumber(productionCost),
+        extraCost: toNumber(extraCost),
         customization,
       })),
     });
@@ -302,7 +308,7 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
                       min={1}
                       max={selected?.availableStock ?? undefined}
                       value={line.quantity}
-                      onChange={(e) => updateQuantity(i, parseInt(e.target.value) || 1)}
+                      onChange={(e) => updateQuantity(i, parseNumberField(e.target.value))}
                       className="mt-1 h-9 text-sm"
                     />
                   </div>
@@ -313,7 +319,7 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
                       step="0.01"
                       min={0}
                       value={line.unitPrice}
-                      onChange={(e) => updateLine(i, "unitPrice", parseFloat(e.target.value) || 0)}
+                      onChange={(e) => updateLine(i, "unitPrice", parseNumberField(e.target.value))}
                       className="mt-1 h-9 text-sm"
                     />
                   </div>
@@ -328,7 +334,7 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
                         setLines(
                           lines.map((l, idx) =>
                             idx === i
-                              ? { ...l, productionCost: parseFloat(e.target.value) || 0, costEdited: true }
+                              ? { ...l, productionCost: parseNumberField(e.target.value), costEdited: true }
                               : l
                           )
                         )
@@ -351,7 +357,7 @@ export default function SaleForm({ items: allItems }: { items: ItemForSale[] }) 
                       step="0.01"
                       min={0}
                       value={line.extraCost}
-                      onChange={(e) => updateLine(i, "extraCost", parseFloat(e.target.value) || 0)}
+                      onChange={(e) => updateLine(i, "extraCost", parseNumberField(e.target.value))}
                       className="mt-1 h-9 text-sm"
                       placeholder="0.00"
                       title="Estimado de tinta, luz, papel, tape y demás para esta línea"

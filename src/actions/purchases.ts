@@ -5,6 +5,7 @@ import { requireBusiness } from "@/lib/require-auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { PurchaseCategory, UserRole } from "@prisma/client";
+import { getAvailableStock } from "@/lib/stock";
 
 const purchaseItemSchema = z.object({
   inventoryItemId: z.string().min(1),
@@ -15,7 +16,8 @@ const purchaseItemSchema = z.object({
 });
 
 const purchaseSchema = z.object({
-  description: z.string().min(1, "Descripción requerida"),
+  // La descripción la arma el servidor con los artículos comprados
+  description: z.string().optional(),
   supplierId: z.string().optional(),
   category: z.nativeEnum(PurchaseCategory),
   receiptUrl: z.string().url().optional().or(z.literal("")),
@@ -36,8 +38,33 @@ async function resolveItems(
     select: { id: true, description: true },
   });
   if (found.length !== ids.length) return null;
+
+  // El producto opcional de cada ítem también debe ser del negocio.
+  const productIds = [...new Set(items.flatMap((i) => (i.productId ? [i.productId] : [])))];
+  if (productIds.length > 0) {
+    const products = await prisma.product.count({ where: { id: { in: productIds }, businessId } });
+    if (products !== productIds.length) return null;
+  }
+
   const byId = new Map(found.map((f) => [f.id, f.description]));
   return items.map((i) => ({ ...i, description: byId.get(i.inventoryItemId)! }));
+}
+
+// Resumen legible de lo comprado, ej. "Taza 11oz ×3, Gorra ×2, Plato ×1 y 2 más"
+function describeItems(items: { description: string; quantity: number }[]) {
+  const shown = items.slice(0, 3).map((i) => `${i.description} ×${i.quantity}`).join(", ");
+  const rest = items.length - 3;
+  return rest > 0 ? `${shown} y ${rest} más` : shown;
+}
+
+// El proveedor es opcional; si viene, debe ser del negocio de la sesión.
+async function isValidSupplier(businessId: string, supplierId: string | undefined) {
+  if (!supplierId) return true;
+  const supplier = await prisma.supplier.findFirst({
+    where: { id: supplierId, businessId },
+    select: { id: true },
+  });
+  return !!supplier;
 }
 
 function revalidateStock() {
@@ -57,12 +84,15 @@ export async function createPurchase(data: z.infer<typeof purchaseSchema>) {
 
   const items = await resolveItems(businessId, parsed.data.items);
   if (!items) return { error: { items: ["Artículo de inventario inválido"] } };
+  if (!(await isValidSupplier(businessId, parsed.data.supplierId))) {
+    return { error: { supplierId: ["Proveedor inválido"] } };
+  }
 
   const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
 
   await prisma.purchase.create({
     data: {
-      description: parsed.data.description,
+      description: describeItems(items),
       supplierId: parsed.data.supplierId || null,
       category: parsed.data.category,
       receiptUrl: parsed.data.receiptUrl || null,
@@ -80,10 +110,35 @@ export async function createPurchase(data: z.infer<typeof purchaseSchema>) {
 
 export async function deletePurchase(id: string) {
   const { businessId } = await requireBusiness([UserRole.ADMIN]);
-  const purchase = await prisma.purchase.findUnique({ where: { id } });
-  if (!purchase || purchase.businessId !== businessId) throw new Error("Sin permiso");
+  const parsedId = z.string().min(1).safeParse(id);
+  if (!parsedId.success) return { error: "Compra no encontrada" };
 
-  await prisma.purchase.delete({ where: { id } });
+  try {
+    await prisma.$transaction(async (tx) => {
+      const purchase = await tx.purchase.findFirst({
+        where: { id: parsedId.data, businessId },
+        include: { items: { include: { inventoryItem: { select: { description: true } } } } },
+      });
+      if (!purchase) throw new Error("Compra no encontrada");
+
+      await tx.purchase.delete({ where: { id: purchase.id } });
+
+      // Si lo comprado ya se vendió o se sacó, borrar la compra dejaría stock negativo
+      for (const item of purchase.items) {
+        if (!item.inventoryItemId) continue;
+        const available = await getAvailableStock(tx, item.inventoryItemId);
+        if (available < 0) {
+          const name = item.inventoryItem?.description ?? item.description;
+          throw new Error(
+            `No se puede eliminar: de ${name} ya se vendieron o sacaron unidades de esta compra (el stock quedaría en ${available})`
+          );
+        }
+      }
+    });
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Error al eliminar la compra" };
+  }
+
   revalidateStock();
   return { success: true };
 }
@@ -117,6 +172,9 @@ export async function updatePurchase(id: string, data: z.infer<typeof purchaseSc
 
   const items = await resolveItems(businessId, parsed.data.items);
   if (!items) return { error: { items: ["Artículo de inventario inválido"] } };
+  if (!(await isValidSupplier(businessId, parsed.data.supplierId))) {
+    return { error: { supplierId: ["Proveedor inválido"] } };
+  }
 
   const totalAmount = items.reduce((sum, item) => sum + item.quantity * item.unitCost, 0);
 
@@ -125,7 +183,7 @@ export async function updatePurchase(id: string, data: z.infer<typeof purchaseSc
     prisma.purchase.update({
       where: { id },
       data: {
-        description: parsed.data.description,
+        description: describeItems(items),
         supplierId: parsed.data.supplierId || null,
         category: parsed.data.category,
         receiptUrl: parsed.data.receiptUrl || null,

@@ -25,8 +25,9 @@ npm run db:seed
 Esto crea:
 - **Negocio:** Arte Madisa
 - **Usuarios:**
-  - `super@sistema.com` / `super123` (SUPER_ADMIN)
-  - `admin@artemadisa.com` / `admin123` (ADMIN)
+  - `super@sistema.com` (SUPER_ADMIN), con la contraseña de `SEED_SUPER_PASSWORD`
+  - `admin@artemadisa.com` (ADMIN), con la contraseña de `SEED_ADMIN_PASSWORD`
+  - Si esas variables no están definidas, el seed genera las contraseñas y las imprime una sola vez.
 - **8 productos de muestra** (tazas, platos, vasos, sweaters, placas, etc.)
 
 ### 4. Iniciar el servidor de desarrollo

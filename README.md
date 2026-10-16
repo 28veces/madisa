@@ -42,8 +42,10 @@ Después de ejecutar `npm run db:seed`, estos usuarios están disponibles:
 
 | Email | Contraseña | Rol |
 |-------|-----------|-----|
-| `super@sistema.com` | `super123` | SUPER_ADMIN |
-| `admin@artemadisa.com` | `admin123` | ADMIN |
+| `super@sistema.com` | `SEED_SUPER_PASSWORD` | SUPER_ADMIN |
+| `admin@artemadisa.com` | `SEED_ADMIN_PASSWORD` | ADMIN |
+
+Las contraseñas se toman de esas variables de entorno. Si no están definidas, el seed genera una al azar y la imprime una sola vez en la consola. El seed no cambia la contraseña de un usuario que ya existe.
 
 ## Comandos Disponibles
 

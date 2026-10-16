@@ -77,3 +77,51 @@ export async function getAdjustments() {
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   });
 }
+
+export async function getAdjustment(id: string) {
+  const { businessId } = await requireBusiness([UserRole.ADMIN, UserRole.SECRETARY, UserRole.ACCOUNTANT]);
+  return prisma.inventoryAdjustment.findFirst({
+    where: { id, businessId },
+    include: { inventoryItem: { select: { code: true, description: true, category: true } } },
+  });
+}
+
+export async function updateAdjustment(id: string, data: z.infer<typeof adjustmentSchema>) {
+  const { businessId } = await requireBusiness([UserRole.ADMIN, UserRole.SECRETARY]);
+  const parsed = adjustmentSchema.safeParse(data);
+  if (!parsed.success) {
+    return { error: Object.values(parsed.error.flatten().fieldErrors).flat()[0] ?? "Datos inválidos" };
+  }
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      const adjustment = await tx.inventoryAdjustment.findFirst({ where: { id, businessId } });
+      if (!adjustment) throw new Error("Salida no encontrada");
+
+      const item = await tx.inventoryItem.findFirst({
+        where: { id: parsed.data.inventoryItemId, businessId },
+        select: { description: true },
+      });
+      if (!item) throw new Error("Artículo no encontrado");
+
+      await tx.inventoryAdjustment.update({
+        where: { id },
+        data: { ...parsed.data, note: parsed.data.note || null },
+      });
+
+      // Con la salida ya actualizada, el stock del artículo no puede quedar negativo.
+      // Lo disponible para esta salida es lo que queda más su propia cantidad.
+      const remaining = await getAvailableStock(tx, parsed.data.inventoryItemId);
+      if (remaining < 0) {
+        throw new Error(
+          `No hay suficiente stock de ${item.description} (disponible: ${remaining + parsed.data.quantity})`
+        );
+      }
+    });
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Error al actualizar la salida" };
+  }
+
+  revalidateStock();
+  return { success: true };
+}

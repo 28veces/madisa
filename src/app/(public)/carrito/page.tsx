@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Trash2, ShoppingBag, MessageCircle, ImageIcon, Plus, Minus, Loader2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/stores/cartStore";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency, cn, isOptimizableImage } from "@/lib/utils";
 import { useState } from "react";
 import { createPublicOrder } from "@/actions/public-orders";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ export default function CarritoPage() {
   const [clientPhone, setClientPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const router = useRouter();
 
   if (items.length === 0) {
     return (
@@ -53,22 +55,24 @@ export default function CarritoPage() {
         items: items.map((item) => ({
           productId: item.productId,
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          customization: item.customization,
+          customization: item.customization || undefined,
         })),
-        totalAmount: totalPrice(),
         notes: "Pedido desde el sitio web",
       });
 
       if (result.success) {
         toast.success(result.message);
+        // El total lo calcula el servidor con los precios actuales; el carrito guardado puede tener precios viejos.
+        if (result.totalAmount !== undefined && Math.abs(result.totalAmount - totalPrice()) >= 0.01) {
+          toast.info(`Los precios cambiaron desde que agregaste los artículos. Total del pedido: ${formatCurrency(result.totalAmount)}`);
+        }
         clearCart();
         setClientName("");
         setClientPhone("");
         setShowForm(false);
         // Redirigir después de 2 segundos
         setTimeout(() => {
-          window.location.href = "/catalogo";
+          router.push("/catalogo");
         }, 2000);
       } else {
         toast.error(result.message);
@@ -111,7 +115,7 @@ export default function CarritoPage() {
           >
             <div className="relative w-20 h-20 flex-shrink-0 bg-gray-50 rounded-xl overflow-hidden">
               {item.imageUrl ? (
-                <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
+                <Image src={item.imageUrl} alt={item.name} fill unoptimized={!isOptimizableImage(item.imageUrl)} className="object-cover" />
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-300">
                   <ImageIcon className="h-8 w-8" />

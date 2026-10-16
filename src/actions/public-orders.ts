@@ -1,96 +1,134 @@
 "use server";
 
+import { z } from "zod";
+import { BusinessLine } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getActiveBusinessId } from "@/lib/require-auth";
+import { consumeRateLimit, getClientIp } from "@/lib/rate-limit";
 import { getAvailableStock, getAverageUnitCosts, lineCost } from "@/lib/stock";
 
-export interface PublicOrderData {
-  clientName: string;
-  clientPhone: string;
-  items: Array<{
-    productId: string;
-    quantity: number;
-    unitPrice: number;
-    customization?: string;
-  }>;
-  totalAmount: number;
-  businessLine?: string;
-  notes?: string;
-}
+// El precio y el total no se reciben: se calculan en el servidor con los precios del catálogo.
+const publicOrderSchema = z.object({
+  clientName: z.string().trim().min(1, "Ingresa tu nombre").max(100, "El nombre es demasiado largo"),
+  clientPhone: z
+    .string()
+    .trim()
+    .regex(/^[0-9+()\-\s]{7,20}$/, "Ingresa un teléfono válido"),
+  items: z
+    .array(
+      z.object({
+        productId: z.string().min(1).max(100),
+        quantity: z
+          .number()
+          .int("La cantidad debe ser un número entero")
+          .min(1, "La cantidad debe ser al menos 1")
+          .max(100, "La cantidad máxima por artículo es 100"),
+        customization: z.string().trim().max(500, "La personalización es demasiado larga").optional(),
+      })
+    )
+    .min(1, "El carrito está vacío")
+    .max(50, "El pedido tiene demasiados artículos"),
+  businessLine: z.nativeEnum(BusinessLine).optional(),
+  notes: z.string().trim().max(500, "La nota es demasiado larga").optional(),
+});
+
+export type PublicOrderData = z.input<typeof publicOrderSchema>;
+
+const MAX_ORDERS = 5;
+const ORDER_WINDOW_MS = 10 * 60 * 1000;
+
+// Error con un mensaje apto para el visitante; cualquier otro error se reemplaza por uno genérico.
+class PublicOrderError extends Error {}
 
 export async function createPublicOrder(data: PublicOrderData) {
+  const parsed = publicOrderSchema.safeParse(data);
+  if (!parsed.success) {
+    return { success: false, message: parsed.error.issues[0]?.message ?? "Datos del pedido inválidos" };
+  }
+  const order = parsed.data;
+
   try {
+    const businessId = await getActiveBusinessId();
+    if (!businessId) throw new PublicOrderError("La tienda no está disponible en este momento");
+
+    const phoneDigits = order.clientPhone.replace(/\D/g, "");
+    const allowed = await consumeRateLimit(
+      [`order:ip:${await getClientIp()}`, `order:phone:${phoneDigits}`],
+      MAX_ORDERS,
+      ORDER_WINDOW_MS
+    );
+    if (!allowed) {
+      throw new PublicOrderError("Recibimos varios pedidos seguidos. Espera unos minutos e intenta de nuevo");
+    }
+
     const sale = await prisma.$transaction(async (tx) => {
-      const business = await tx.business.findFirst({
-        where: { isActive: true },
-        orderBy: { createdAt: "asc" },
+      const productIds = [...new Set(order.items.map((item) => item.productId))];
+      const products = await tx.product.findMany({
+        where: { id: { in: productIds }, businessId, isActive: true },
+      });
+      const productById = new Map(products.map((p) => [p.id, p]));
+
+      const lines = order.items.map((item) => {
+        const product = productById.get(item.productId);
+        if (!product) throw new PublicOrderError("Uno de los productos ya no está disponible. Revisa tu carrito");
+        return { ...item, product, unitPrice: product.basePrice };
       });
 
-      if (!business) throw new Error("No hay negocio activo configurado");
-
-      // Resolver productId → inventoryItemId y verificar stock
-      const resolvedItems = await Promise.all(
-        data.items.map(async (item) => {
-          const product = await tx.product.findUnique({
-            where: { id: item.productId, businessId: business.id },
-          });
-
-          if (!product) throw new Error(`Producto ${item.productId} no encontrado`);
-
-          // Si el producto tiene inventario vinculado, verificar stock
-          if (product.inventoryItemId) {
-            const available = await getAvailableStock(tx, product.inventoryItemId);
-
-            if (available < item.quantity) {
-              throw new Error(
-                `Stock insuficiente de "${product.name}". Disponible: ${available}`
-              );
-            }
-          }
-
-          return { ...item, inventoryItemId: product.inventoryItemId };
-        })
-      );
+      // El stock se verifica por artículo sumando todas las líneas que lo usan,
+      // para que repetir un producto en el pedido no permita superar lo disponible.
+      const quantityByItem = new Map<string, { quantity: number; name: string }>();
+      for (const line of lines) {
+        const inventoryItemId = line.product.inventoryItemId;
+        if (!inventoryItemId) continue;
+        const current = quantityByItem.get(inventoryItemId) ?? { quantity: 0, name: line.product.name };
+        current.quantity += line.quantity;
+        quantityByItem.set(inventoryItemId, current);
+      }
+      for (const [inventoryItemId, { quantity, name }] of quantityByItem) {
+        const available = await getAvailableStock(tx, inventoryItemId);
+        if (available < quantity) {
+          throw new PublicOrderError(`Stock insuficiente de "${name}". Disponible: ${Math.max(available, 0)}`);
+        }
+      }
 
       // El costo se calcula en el servidor (costo promedio de compra), nunca desde el cliente
-      const avgCosts = await getAverageUnitCosts(
-        tx,
-        resolvedItems.flatMap((i) => (i.inventoryItemId ? [i.inventoryItemId] : []))
-      );
+      const avgCosts = await getAverageUnitCosts(tx, [...quantityByItem.keys()]);
+      const totalAmount =
+        Math.round(lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0) * 100) / 100;
 
-      const newSale = await tx.sale.create({
+      return tx.sale.create({
         data: {
-          clientName: data.clientName,
-          clientPhone: data.clientPhone,
-          notes: data.notes,
-          totalAmount: data.totalAmount,
-          businessLine: data.businessLine as any,
+          clientName: order.clientName,
+          clientPhone: order.clientPhone,
+          notes: order.notes,
+          totalAmount,
+          businessLine: order.businessLine,
           status: "PENDING",
-          businessId: business.id,
+          businessId,
           items: {
-            create: resolvedItems
-              .filter((item) => item.inventoryItemId !== null)
-              .map((item) => ({
-                inventoryItemId: item.inventoryItemId!,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                productionCost: lineCost(avgCosts.get(item.inventoryItemId!) ?? 0, item.quantity),
-                customization: item.customization,
+            create: lines
+              .filter((line) => line.product.inventoryItemId !== null)
+              .map((line) => ({
+                inventoryItemId: line.product.inventoryItemId!,
+                quantity: line.quantity,
+                unitPrice: line.unitPrice,
+                productionCost: lineCost(avgCosts.get(line.product.inventoryItemId!) ?? 0, line.quantity),
+                customization: line.customization,
               })),
           },
         },
       });
-
-      return newSale;
     });
 
     return {
       success: true,
       saleId: sale.id,
+      totalAmount: sale.totalAmount,
       message: "Pedido creado exitosamente. El administrador lo revisará pronto.",
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Error al crear el pedido";
+    if (error instanceof PublicOrderError) return { success: false, message: error.message };
     console.error("Error en createPublicOrder:", error);
-    return { success: false, message };
+    return { success: false, message: "No pudimos registrar tu pedido. Intenta nuevamente" };
   }
 }

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
+import { isOptimizableImage } from "@/lib/utils";
 import { useSession } from "next-auth/react";
 import { updateProfilePhoto, updateProfileName } from "@/actions/profile";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +80,7 @@ export default function ProfileHeader({
         <div className="relative group">
           <div className="h-32 w-32 rounded-full overflow-hidden ring-4 ring-offset-2 ring-rose-100 bg-gradient-to-br from-rose-500 to-purple-600 flex items-center justify-center">
             {photo ? (
-              <Image src={photo} alt={name} width={128} height={128} className="h-full w-full object-cover" />
+              <Image src={photo} alt={name} width={128} height={128} unoptimized={!isOptimizableImage(photo)} className="h-full w-full object-cover" />
             ) : (
               <span className="text-4xl font-semibold text-white">{initials(name || email)}</span>
             )}

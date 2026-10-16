@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, parseNumberField, toNumber, type NumberField } from "@/lib/utils";
 import { updateSaleItemCosts } from "@/actions/sales";
 
 interface Item {
@@ -19,7 +19,7 @@ interface Item {
   extraCost: number;
 }
 
-type Costs = Record<string, { productionCost: number; extraCost: number }>;
+type Costs = Record<string, { productionCost: NumberField; extraCost: NumberField }>;
 
 const initialCosts = (items: Item[]): Costs =>
   Object.fromEntries(
@@ -41,18 +41,23 @@ export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }:
   const dirty = items.some(
     (i) => costs[i.id].productionCost !== i.productionCost || costs[i.id].extraCost !== i.extraCost
   );
-  const totalCompra = items.reduce((sum, i) => sum + costs[i.id].productionCost, 0);
-  const totalProduccion = items.reduce((sum, i) => sum + costs[i.id].extraCost, 0);
+  const totalCompra = items.reduce((sum, i) => sum + toNumber(costs[i.id].productionCost), 0);
+  const totalProduccion = items.reduce((sum, i) => sum + toNumber(costs[i.id].extraCost), 0);
   const totalGanancia = items.reduce((sum, i) => sum + i.quantity * i.unitPrice, 0) - totalCompra - totalProduccion;
 
-  const setCost = (id: string, field: "productionCost" | "extraCost", value: number) =>
+  const setCost = (id: string, field: "productionCost" | "extraCost", value: NumberField) =>
     setCosts({ ...costs, [id]: { ...costs[id], [field]: value } });
 
   const handleSave = async () => {
     setSaving(true);
     const result = await updateSaleItemCosts(
       saleId,
-      items.map((i) => ({ id: i.id, ...costs[i.id] }))
+      // Un costo vacío se guarda como 0
+      items.map((i) => ({
+        id: i.id,
+        productionCost: toNumber(costs[i.id].productionCost),
+        extraCost: toNumber(costs[i.id].extraCost),
+      }))
     );
     setSaving(false);
     if (result.error) return toast.error(result.error);
@@ -104,7 +109,7 @@ export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }:
               <tbody className="divide-y">
                 {items.map((item) => {
                   const subtotal = item.quantity * item.unitPrice;
-                  const ganancia = subtotal - costs[item.id].productionCost - costs[item.id].extraCost;
+                  const ganancia = subtotal - toNumber(costs[item.id].productionCost) - toNumber(costs[item.id].extraCost);
                   return (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="py-3 px-2">
@@ -122,12 +127,12 @@ export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }:
                             step="0.01"
                             min={0}
                             value={costs[item.id].productionCost}
-                            onChange={(e) => setCost(item.id, "productionCost", parseFloat(e.target.value) || 0)}
+                            onChange={(e) => setCost(item.id, "productionCost", parseNumberField(e.target.value))}
                             className="h-8 w-24 text-sm text-right ml-auto"
                             aria-label={`Valor de compra de ${item.description}`}
                           />
                         ) : (
-                          formatCurrency(costs[item.id].productionCost)
+                          formatCurrency(toNumber(costs[item.id].productionCost))
                         )}
                       </td>
                       <td className="text-right py-3 px-2">
@@ -137,12 +142,12 @@ export default function SaleItemsEditor({ saleId, totalAmount, items, canEdit }:
                             step="0.01"
                             min={0}
                             value={costs[item.id].extraCost}
-                            onChange={(e) => setCost(item.id, "extraCost", parseFloat(e.target.value) || 0)}
+                            onChange={(e) => setCost(item.id, "extraCost", parseNumberField(e.target.value))}
                             className="h-8 w-24 text-sm text-right ml-auto"
                             aria-label={`Costo de producción de ${item.description}`}
                           />
                         ) : (
-                          formatCurrency(costs[item.id].extraCost)
+                          formatCurrency(toNumber(costs[item.id].extraCost))
                         )}
                       </td>
                       <td className="text-right py-3 px-2 font-medium">{formatCurrency(subtotal)}</td>

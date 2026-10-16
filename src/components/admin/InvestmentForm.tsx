@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { createInvestment, updateInvestment, InvestmentFormData, ContributionInput } from "@/actions/investments";
 import { toast } from "sonner";
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, parseNumberField, toNumber, type NumberField } from "@/lib/utils";
 
 interface Partner {
   id: string;
@@ -35,6 +35,10 @@ interface InvestmentFormProps {
   initialContributions?: ContributionInput[];
 }
 
+// En el formulario los montos pueden quedar vacíos mientras se escriben
+type FormState = Omit<InvestmentFormData, "amount"> & { amount: NumberField };
+type ContributionState = Omit<ContributionInput, "amount"> & { amount: NumberField };
+
 const categoryLabels: Record<string, string> = {
   MAQUINARIA: "Maquinaria",
   MEJORA_LOCAL: "Mejora del Local",
@@ -49,45 +53,53 @@ export default function InvestmentForm({
 }: InvestmentFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<InvestmentFormData>({
+  const [formData, setFormData] = useState<FormState>({
     description: investment?.description || "",
-    amount: investment?.amount || 0,
+    amount: investment ? investment.amount : "",
     category: investment?.category || "MAQUINARIA",
     purchaseDate: investment?.purchaseDate?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
     notes: investment?.notes || "",
   });
-  const [contributions, setContributions] = useState<ContributionInput[]>(initialContributions);
+  const [contributions, setContributions] = useState<ContributionState[]>(initialContributions);
 
-  const totalContributed = contributions.reduce((s, c) => s + (c.amount || 0), 0);
-  const remaining = formData.amount - totalContributed;
+  const totalContributed = contributions.reduce((s, c) => s + toNumber(c.amount), 0);
+  const remaining = toNumber(formData.amount) - totalContributed;
 
   const addContribution = () => {
     const availablePartner = partners.find((p) => !contributions.some((c) => c.partnerId === p.id));
     if (!availablePartner) return;
-    setContributions([...contributions, { partnerId: availablePartner.id, amount: 0 }]);
+    setContributions([...contributions, { partnerId: availablePartner.id, amount: "" }]);
   };
 
   const removeContribution = (i: number) => setContributions(contributions.filter((_, idx) => idx !== i));
 
-  const updateContribution = (i: number, field: keyof ContributionInput, value: string | number) => {
+  const updateContribution = (i: number, field: keyof ContributionState, value: string | NumberField) => {
     setContributions(contributions.map((c, idx) => (idx === i ? { ...c, [field]: value } : c)));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (contributions.length > 0 && Math.abs(remaining) > 0.01) {
-      toast.error(`Los aportes (${formatCurrency(totalContributed)}) no coinciden con el monto total (${formatCurrency(formData.amount)})`);
+    if (formData.amount === "" || formData.amount <= 0) {
+      toast.error("Escribe el monto de la inversión");
       return;
     }
 
-    const validContributions = contributions.filter((c) => c.amount > 0);
+    if (contributions.length > 0 && Math.abs(remaining) > 0.01) {
+      toast.error(`Los aportes (${formatCurrency(totalContributed)}) no coinciden con el monto total (${formatCurrency(toNumber(formData.amount))})`);
+      return;
+    }
+
+    const data: InvestmentFormData = { ...formData, amount: toNumber(formData.amount) };
+    const validContributions = contributions
+      .map((c) => ({ ...c, amount: toNumber(c.amount) }))
+      .filter((c) => c.amount > 0);
 
     setIsSubmitting(true);
     try {
       const result = investment
-        ? await updateInvestment(investment.id, formData, validContributions)
-        : await createInvestment(formData, validContributions);
+        ? await updateInvestment(investment.id, data, validContributions)
+        : await createInvestment(data, validContributions);
 
       if (result.success) {
         toast.success(investment ? "Inversión actualizada" : "Inversión creada");
@@ -126,7 +138,7 @@ export default function InvestmentForm({
             <input
               type="number"
               value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => setFormData({ ...formData, amount: parseNumberField(e.target.value) })}
               placeholder="0.00"
               step="0.01"
               min="0"
@@ -208,7 +220,7 @@ export default function InvestmentForm({
                         step="0.01"
                         min={0}
                         value={c.amount}
-                        onChange={(e) => updateContribution(i, "amount", parseFloat(e.target.value) || 0)}
+                        onChange={(e) => updateContribution(i, "amount", parseNumberField(e.target.value))}
                         className="w-28 h-8 text-sm"
                         placeholder="0.00"
                       />

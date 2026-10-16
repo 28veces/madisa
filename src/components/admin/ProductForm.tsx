@@ -72,6 +72,7 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
     register,
     handleSubmit,
     setValue,
+    setError,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -122,13 +123,17 @@ export default function ProductForm({ product, redirectTo = "/admin/catalogo", i
     if (!values.category) errs.category = { message: "Categoría requerida" };
     if (!values.technique) errs.technique = { message: "Técnica requerida" };
     if (!values.material.trim()) errs.material = { message: "Material requerido" };
-    if (values.basePrice < 0) errs.basePrice = { message: "Precio inválido" };
+    if (Number.isNaN(values.basePrice) || values.basePrice < 0) errs.basePrice = { message: "Escribe un precio válido" };
     return errs;
   };
 
   const onSubmit = async (values: FormValues) => {
     const validationErrors = validate(values);
     if (Object.keys(validationErrors).length > 0) {
+      // Muestra el mensaje de cada campo debajo de su input
+      for (const [field, err] of Object.entries(validationErrors)) {
+        setError(field as keyof FormValues, { message: err.message });
+      }
       toast.error("Completa los campos requeridos");
       return;
     }

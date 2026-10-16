@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCartStore } from "@/stores/cartStore";
 import { getCategoryLabel, getTechniqueLabel } from "@/lib/whatsapp";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, parseNumberField, type NumberField, isOptimizableImage } from "@/lib/utils";
 
 interface ProductCardProps {
   id: string;
@@ -37,7 +37,7 @@ export default function ProductCard({
   availableStock,
 }: ProductCardProps) {
   const [customization, setCustomization] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<NumberField>(1);
   const addItem = useCartStore((s) => s.addItem);
   const cartItems = useCartStore((s) => s.items);
 
@@ -48,7 +48,8 @@ export default function ProductCard({
 
   const handleAdd = () => {
     if (outOfStock || atLimit) return;
-    const safeQty = availableStock != null ? Math.min(quantity, remaining) : quantity;
+    const qty = quantity === "" ? 1 : quantity;
+    const safeQty = availableStock != null ? Math.min(qty, remaining) : qty;
     addItem({
       productId: id,
       name,
@@ -72,6 +73,7 @@ export default function ProductCard({
         {imageUrl ? (
           <Image
             src={imageUrl}
+            unoptimized={!isOptimizableImage(imageUrl)}
             alt={name}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -126,9 +128,13 @@ export default function ProductCard({
               max={availableStock != null ? remaining : undefined}
               value={quantity}
               onChange={(e) => {
-                const val = Math.max(1, parseInt(e.target.value) || 1);
+                const parsed = parseNumberField(e.target.value);
+                // Vacío se permite mientras se escribe; al salir del campo vuelve a 1
+                if (parsed === "") return setQuantity("");
+                const val = Math.max(1, Math.floor(parsed));
                 setQuantity(availableStock != null ? Math.min(val, remaining) : val);
               }}
+              onBlur={() => setQuantity((q) => (q === "" ? 1 : q))}
               disabled={outOfStock || atLimit}
               className="h-8 text-sm mt-1 w-24"
             />
