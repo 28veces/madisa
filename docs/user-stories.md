@@ -214,11 +214,14 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio (2026-10-15): un usuario de un negocio inactivo no puede iniciar sesión (ve el mensaje genérico de credenciales incorrectas).
   - Verificado con Playwright y cambios directos en la base: rol cambiado → la sesión toma el rol nuevo; usuario desactivado y negocio desactivado → `/admin/ventas` redirige a `/login`; cookie de 7 días.
   `src/lib/auth.ts:jwt`, `src/lib/auth.ts:authorize`
-- **US-59** ⬜ Como dueño del negocio, quiero que el login bloquee los intentos repetidos, para que nadie pueda adivinar una contraseña probando muchas (hallazgos A3 y B5).
+- **US-59** ✅ Como dueño del negocio, quiero que el login bloquee los intentos repetidos, para que nadie pueda adivinar una contraseña probando muchas (hallazgos A3 y B5).
   - Criterio: tras 5 intentos fallidos para un mismo email en 15 minutos, ese email queda bloqueado 15 minutos, aunque luego se use la contraseña correcta.
   - Criterio: el mensaje es el mismo exista o no el email, para no revelar qué cuentas existen.
   - Criterio: un login correcto reinicia el contador.
   - Criterio: cada intento fallido y cada bloqueo quedan registrados con email, fecha e IP, nunca con la contraseña.
+  - Criterio (2026-10-15): el bloqueo dura hasta que los fallos salen de la ventana de 15 minutos (los intentos durante el bloqueo no lo alargan); el email se compara sin distinguir mayúsculas. El registro es una línea JSON por `console.warn` (`login_fallido`, `login_bloqueado`), visible en los logs de Vercel.
+  - Verificado con Playwright: 3 fallos y luego correcta entra y reinicia el contador; 5 fallos bloquean incluso con la contraseña correcta y con el email en mayúsculas; email inexistente da el mismo mensaje; otro usuario no se afecta; al vencer la ventana vuelve a entrar.
+  `src/lib/auth.ts:authorize`, `src/lib/rate-limit.ts:isRateLimited`
 - **US-60** ⬜ Como dueño del negocio, quiero que ningún usuario de otro negocio pueda vincular mis socios, artículos, proveedores o productos a sus registros, para que mis datos no se vean ni se alteren desde otro negocio (hallazgos A4, A5, A6 y M1).
   - Criterio: crear o editar una inversión con un aporte de un socio de otro negocio se rechaza con "Socio no encontrado".
   - Criterio: crear o editar un producto vinculado a un artículo de inventario de otro negocio se rechaza.

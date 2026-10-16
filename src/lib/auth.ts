@@ -3,11 +3,26 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { clearRateLimit, isRateLimited, recordRateLimitHit } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
 });
+
+// Tras MAX_LOGIN_FAILURES intentos fallidos para un email en la ventana, el login de ese email
+// se rechaza (aunque la contraseña sea correcta) hasta que los fallos salgan de la ventana.
+const MAX_LOGIN_FAILURES = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+function requestIp(request: Request) {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "desconocida";
+}
+
+// Registro de eventos de seguridad del login. Nunca incluye la contraseña.
+function logLoginEvent(event: "login_fallido" | "login_bloqueado", email: string, ip: string) {
+  console.warn(JSON.stringify({ event, email, ip, at: new Date().toISOString() }));
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
@@ -16,9 +31,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   providers: [
     Credentials({
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
+
+        const email = parsed.data.email.toLowerCase();
+        const ip = requestIp(request);
+        const failureKey = `login:email:${email}`;
+
+        if (await isRateLimited(failureKey, MAX_LOGIN_FAILURES, LOGIN_WINDOW_MS)) {
+          logLoginEvent("login_bloqueado", email, ip);
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
@@ -27,10 +51,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             business: { select: { isActive: true } },
           },
         });
-        if (!user || (user.business && !user.business.isActive)) return null;
-
-        const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!valid) return null;
+        const valid =
+          !!user &&
+          !(user.business && !user.business.isActive) &&
+          (await bcrypt.compare(parsed.data.password, user.passwordHash));
+        if (!user || !valid) {
+          await recordRateLimitHit(failureKey);
+          logLoginEvent("login_fallido", email, ip);
+          return null;
+        }
+        await clearRateLimit(failureKey);
 
         return { id: user.id, email: user.email, name: user.name, image: user.imageUrl, role: user.role, businessId: user.businessId };
       },

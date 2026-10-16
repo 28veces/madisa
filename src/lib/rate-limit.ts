@@ -28,6 +28,22 @@ export async function consumeRateLimit(keys: string[], limit: number, windowMs: 
   return true;
 }
 
+// Para límites que cuentan solo algunos intentos (los fallidos): consultar, registrar y limpiar por separado.
+export async function isRateLimited(key: string, limit: number, windowMs: number) {
+  const count = await prisma.rateLimitHit.count({
+    where: { key, createdAt: { gte: new Date(Date.now() - windowMs) } },
+  });
+  return count >= limit;
+}
+
+export async function recordRateLimitHit(key: string) {
+  await prisma.rateLimitHit.create({ data: { key } });
+}
+
+export async function clearRateLimit(key: string) {
+  await prisma.rateLimitHit.deleteMany({ where: { key } });
+}
+
 // IP del visitante. En Vercel `x-forwarded-for` lo escribe la plataforma, no el cliente.
 export async function getClientIp() {
   const headerList = await headers();
