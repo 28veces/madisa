@@ -118,6 +118,10 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   `src/actions/investments.ts` (modelo `InvestmentContribution`)
 - **US-32** ✅ Como `ADMIN`/`ACCOUNTANT`, quiero ver el resumen de aportes por socio.
   `src/actions/investments.ts:getPartnerInvestmentSummary`
+- **US-63** ⬜ Como `ADMIN`/`SECRETARY`, quiero abrir el detalle de un egreso desde el listado para ver y editar sus datos (la page `/admin/egresos/[id]` usa `params` sin `await`, y en Next 16 `params` es una Promise).
+  - Criterio: al abrir un egreso existente se muestran sus datos.
+  - Criterio: un id inexistente o de otro negocio muestra "no encontrado", no un error.
+  - Criterio: la page espera `params` igual que las demás pages `[id]`.
 
 ## Épico H — Socios y reparto de ganancias
 
@@ -137,6 +141,11 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
 - **US-36** ✅ Como `ADMIN`/`SECRETARY`/`ACCOUNTANT`, quiero ver un resumen del mes (ventas, gastos, margen), ventas recientes, productos con poco stock y gráficas de tendencia anual, todo aislado a mi negocio.
   `src/app/(admin)/admin/page.tsx`
 - **US-37** ⬜ Como `ADMIN`, quiero que "productos con stock bajo" use un umbral real (hoy solo lista 5 productos activos, no calcula si el stock está realmente bajo).
+- **US-62** ⬜ Como `ADMIN`, quiero decidir qué cifras del dashboard ve cada rol y que se obtengan con una Server Action, para que la secretaria no vea ventas, gastos y margen si no corresponde (hallazgo M2 de `docs/seguridad/2026-10-15-revision-2.md`).
+  - Criterio: las consultas del dashboard salen de `src/app/(admin)/admin/page.tsx` y pasan a una Server Action con `requireBusiness` y roles explícitos.
+  - Criterio: una `SECRETARY` no ve los totales de ventas, gastos ni margen del mes (o los ve, si el negocio lo decide así; la decisión queda escrita en la historia).
+  - Criterio: `ADMIN` y `ACCOUNTANT` ven el mismo dashboard que hoy.
+  - Criterio: un rol sin permiso que invoca la action directamente recibe "Sin permiso".
 
 ## Épico J — Usuarios del negocio
 
@@ -191,11 +200,11 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio (2026-10-15): el stock se verifica sumando todas las líneas del pedido que usan el mismo artículo, para que repetir un producto no permita superar lo disponible.
   - Criterio (2026-10-15): el límite se guarda en la tabla `RateLimitHit` (migración aditiva) porque en Vercel cada request puede caer en otra instancia; con peticiones simultáneas nunca pasan más de 5 (probado con una ráfaga de 8: pasaron 4).
   `src/actions/public-orders.ts:createPublicOrder`, `src/lib/rate-limit.ts:consumeRateLimit`, `prisma/migrations/20261015200000_rate_limit_hits`
-- **US-56** 🟡 Como dueño de la plataforma, quiero que el seed no tenga contraseñas escritas en el código, para que leer el repositorio no dé acceso a ninguna cuenta (hallazgo C2 de `docs/seguridad/2026-10-15-revision.md`).
+- **US-56** ✅ Como dueño de la plataforma, quiero que el seed no tenga contraseñas escritas en el código, para que leer el repositorio no dé acceso a ninguna cuenta (hallazgo C2 de `docs/seguridad/2026-10-15-revision.md`).
   - Criterio: `prisma/seed.ts` toma las contraseñas iniciales de `SEED_SUPER_PASSWORD` y `SEED_ADMIN_PASSWORD`; si faltan, genera una al azar y la imprime una sola vez en consola.
   - Criterio: `git grep -nE "super123|admin123"` no encuentra nada en el repo fuera de `docs/` (donde solo aparecen en esta historia y en el reporte de seguridad).
   - Criterio: en producción ya no se puede entrar con `super@sistema.com` ni `admin@artemadisa.com` usando las contraseñas antiguas del seed (lo confirma una persona).
-  - Pendiente: una persona debe cambiar esas dos contraseñas en producción y confirmarlo; el código ya no las contiene (verificado: seed con variables, sin variables y segunda corrida que no pisa usuarios existentes).
+  - Verificado: seed con variables, sin variables y segunda corrida que no pisa usuarios existentes. El responsable confirmó el 2026-10-15 que cambió las dos contraseñas en producción.
   `prisma/seed.ts:initialPassword`, `README.md`, `SETUP.md`
 - **US-57** ✅ Como dueño del negocio, quiero que la app use versiones de Next.js y Auth.js sin vulnerabilidades críticas conocidas, para no quedar expuesto a ataques ya publicados (hallazgos A1, M2 y B3).
   - Criterio: `next` queda en 16.4.2 o superior y `next-auth` en la última beta de v5.
