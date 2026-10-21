@@ -147,6 +147,14 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio: al abrir un egreso existente se muestran sus datos.
   - Criterio: un id inexistente o de otro negocio muestra "no encontrado", no un error.
   - Criterio: la page espera `params` igual que las demás pages `[id]`.
+- **US-70** ✅ Como `ADMIN`, quiero indicar al registrar un egreso si se repite (mensual, cada 3 meses, cada 6 meses o anual) para que la app me avise del próximo pago sin tener que crear aparte el egreso fijo.
+  `src/actions/expenses.ts:createExpense`, `src/components/admin/ExpenseForm.tsx`
+  - Criterio: en Nuevo egreso, la casilla "¿Es un egreso recurrente? (mensual)" se reemplaza por un selector "¿Se repite?" con No, Mensual, Cada 3 meses, Cada 6 meses y Anual; por defecto, No.
+  - Criterio: con una frecuencia elegida, al guardar se crea el egreso (marcado "Recurrente" y enlazado) y un egreso fijo con la misma descripción, categoría, monto y notas, cuya próxima fecha es la del egreso avanzada según la frecuencia (21-oct trimestral → 21-ene; 31-ene mensual → 28-feb). Ambos se crean en una sola transacción: si uno falla, no queda ninguno.
+  - Criterio: con "No" se crea solo el egreso, como hoy. Al editar un egreso existente no se ofrece el selector (la repetición se gestiona en Egresos fijos) y se conserva su marca "Recurrente".
+  - Criterio: una frecuencia que no sea una de las cuatro se rechaza con un mensaje y no se guarda nada. Los egresos antiguos marcados "Recurrente" se siguen viendo igual; no hay migración.
+  - Criterio (2026-10-21): al crear, la descripción y la categoría se recortan y tienen los mismos máximos que un egreso fijo (200, 100 y notas 1000), y la fecha debe ser un día AAAA-MM-DD válido. La fecha por defecto es "hoy" en hora de Panamá (`todayISO()`), no el día UTC.
+  - Verificado (2026-10-21) con Playwright en local: trimestral 21-oct → 21-ene; mensual 31-ene → 28-feb; "No" crea solo el egreso; una frecuencia inyectada que no existe muestra "Frecuencia inválida" y no guarda nada. El criterio de edición se verificó solo en código, porque `/admin/egresos/[id]` está rota (US-63).
 
 ## Épico H — Socios y reparto de ganancias
 
