@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { createExpense, updateExpense, ExpenseFormData } from "@/actions/expenses";
+import { RECURRENCE_FREQUENCIES, todayISO, type RecurrenceFrequencyValue } from "@/lib/recurrence";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { parseNumberField, type NumberField } from "@/lib/utils";
@@ -35,9 +36,11 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
     amount: expense ? expense.amount : "",
     category: expense?.category || "",
     isRecurring: expense?.isRecurring || false,
-    expenseDate: expense?.expenseDate?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
+    expenseDate: expense?.expenseDate?.toISOString().split("T")[0] || todayISO(),
     notes: expense?.notes || "",
   });
+  // Solo al crear: si se repite, también se crea el egreso fijo (US-70)
+  const [frequency, setFrequency] = useState<RecurrenceFrequencyValue | "">("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,10 +54,16 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
     try {
       const result = expense
         ? await updateExpense(expense.id, data)
-        : await createExpense(data);
+        : await createExpense({ ...data, frequency: frequency || null });
 
       if (result.success) {
-        toast.success(expense ? "Egreso actualizado" : "Egreso creado");
+        toast.success(
+          expense
+            ? "Egreso actualizado"
+            : frequency
+              ? "Egreso creado; te avisaremos del próximo pago en Egresos fijos"
+              : "Egreso creado"
+        );
         router.push("/admin/egresos");
       } else {
         toast.error(result.message);
@@ -136,20 +145,31 @@ export default function ExpenseForm({ expense }: ExpenseFormProps) {
           />
         </div>
 
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="recurring"
-            checked={formData.isRecurring}
-            onChange={(e) =>
-              setFormData({ ...formData, isRecurring: e.target.checked })
-            }
-            className="rounded border-gray-300 text-rose-600 focus:ring-rose-500"
-          />
-          <label htmlFor="recurring" className="ml-2 text-sm text-gray-700">
-            ¿Es un egreso recurrente? (mensual)
-          </label>
-        </div>
+        {!expense && (
+          <div>
+            <label htmlFor="frequency" className="block text-sm font-medium text-gray-700 mb-1">
+              ¿Se repite?
+            </label>
+            <select
+              id="frequency"
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value as RecurrenceFrequencyValue | "")}
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500"
+            >
+              <option value="">No</option>
+              {RECURRENCE_FREQUENCIES.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            {frequency && (
+              <p className="mt-1 text-xs text-gray-500">
+                También se agregará a Egresos fijos y te avisaremos cuando toque el próximo pago.
+              </p>
+            )}
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">

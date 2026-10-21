@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { requireBusiness } from "@/lib/require-auth";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { RecurrenceFrequency } from "@prisma/client";
+import { advanceDueDate } from "@/lib/recurrence";
 
 const expenseSchema = z.object({
   description: z.string().min(1, "La descripción es requerida"),
@@ -16,21 +18,68 @@ const expenseSchema = z.object({
 
 export type ExpenseFormData = z.infer<typeof expenseSchema>;
 
-export async function createExpense(formData: ExpenseFormData) {
+// Al crear se puede indicar si el egreso se repite: entonces también se crea el egreso fijo,
+// así que los campos llevan los mismos límites que en recurring-expenses.ts
+const createExpenseSchema = expenseSchema.extend({
+  description: z.string().trim().min(1, "La descripción es requerida").max(200),
+  category: z.string().trim().min(1, "La categoría es requerida").max(100),
+  notes: z.string().max(1000).optional(),
+  // AAAA-MM-DD de un día que exista: de ahí se calcula el próximo pago
+  expenseDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida")
+    .refine((s) => {
+      const d = new Date(s);
+      return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+    }, "Fecha inválida"),
+  frequency: z
+    .nativeEnum(RecurrenceFrequency, { message: "Frecuencia inválida" })
+    .nullable()
+    .default(null),
+});
+
+export type CreateExpenseFormData = z.input<typeof createExpenseSchema>;
+
+export async function createExpense(formData: CreateExpenseFormData) {
   const { businessId } = await requireBusiness(["ADMIN"]);
 
   try {
-    const parsed = expenseSchema.parse(formData);
+    const result = createExpenseSchema.safeParse(formData);
+    if (!result.success) {
+      return { success: false, message: result.error.issues[0]?.message ?? "Datos inválidos" };
+    }
+    const { frequency, ...parsed } = result.data;
+    const expenseDate = new Date(parsed.expenseDate);
 
-    const expense = await prisma.expense.create({
-      data: {
-        ...parsed,
-        businessId,
-        expenseDate: new Date(parsed.expenseDate),
-      },
+    const expense = await prisma.$transaction(async (tx) => {
+      // El próximo pago es la fecha de este egreso avanzada según la frecuencia
+      const recurring = frequency
+        ? await tx.recurringExpense.create({
+            data: {
+              description: parsed.description,
+              category: parsed.category,
+              amount: parsed.amount,
+              frequency,
+              nextDueDate: advanceDueDate(expenseDate, frequency),
+              notes: parsed.notes || null,
+              businessId,
+            },
+          })
+        : null;
+
+      return tx.expense.create({
+        data: {
+          ...parsed,
+          isRecurring: recurring ? true : parsed.isRecurring,
+          recurringExpenseId: recurring?.id,
+          businessId,
+          expenseDate,
+        },
+      });
     });
 
     revalidatePath("/admin/egresos");
+    if (frequency) revalidatePath("/admin");
     return { success: true, expense };
   } catch (error) {
     const message =
