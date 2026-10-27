@@ -23,13 +23,13 @@ export default function CarritoPage() {
   if (items.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-        <span className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white text-violet-deep ring-1 ring-lavender-deep mb-5">
+        <span className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-white text-fuchsia-deep ring-1 ring-blush-deep mb-5">
           <ShoppingBag className="h-9 w-9" />
         </span>
         <h1 className="text-2xl font-extrabold text-ink mb-2">Tu carrito está vacío</h1>
         <p className="text-ink/65 mb-6">Explora el catálogo y agrega artículos para cotizar.</p>
         <Link href="/catalogo">
-          <Button className="h-11 rounded-full bg-violet px-6 font-bold text-white hover:bg-violet-deep">Ir al catálogo</Button>
+          <Button className="h-11 rounded-full bg-fuchsia-deep px-6 font-bold text-white hover:bg-fuchsia-dark">Ir al catálogo</Button>
         </Link>
       </div>
     );
@@ -113,13 +113,13 @@ export default function CarritoPage() {
         {items.map((item) => (
           <div
             key={item.productId}
-            className="flex gap-4 p-3 sm:p-4 bg-white rounded-3xl ring-1 ring-lavender-deep shadow-sm"
+            className="flex gap-4 p-3 sm:p-4 bg-white rounded-3xl ring-1 ring-blush-deep shadow-sm"
           >
-            <div className="relative w-20 h-20 flex-shrink-0 bg-lavender rounded-2xl overflow-hidden">
+            <div className="relative w-20 h-20 flex-shrink-0 bg-blush rounded-2xl overflow-hidden">
               {item.imageUrl ? (
                 <Image src={item.imageUrl} alt={item.name} fill unoptimized={!isOptimizableImage(item.imageUrl)} className="object-cover" />
               ) : (
-                <div className="flex items-center justify-center h-full text-violet/40">
+                <div className="flex items-center justify-center h-full text-fuchsia/40">
                   <ImageIcon className="h-8 w-8" />
                 </div>
               )}
@@ -129,7 +129,7 @@ export default function CarritoPage() {
               <h3 className="font-bold text-ink truncate">{item.name}</h3>
               <p className="text-sm text-ink/65">{item.technique} · {item.material}</p>
               {item.customization && (
-                <p className="text-xs text-violet-deep mt-0.5 italic">
+                <p className="text-xs text-fuchsia-deep mt-0.5 italic">
                   &ldquo;{item.customization}&rdquo;
                 </p>
               )}
@@ -157,7 +157,7 @@ export default function CarritoPage() {
                 <button
                   onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                   aria-label="Quitar uno"
-                  className="w-7 h-7 rounded-full bg-lavender text-ink flex items-center justify-center hover:bg-lavender-deep transition-colors"
+                  className="w-7 h-7 rounded-full bg-blush text-ink flex items-center justify-center hover:bg-blush-deep transition-colors"
                 >
                   <Minus className="h-3 w-3" />
                 </button>
@@ -166,7 +166,7 @@ export default function CarritoPage() {
                   onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                   disabled={item.maxStock != null && item.quantity >= item.maxStock}
                   aria-label="Agregar uno"
-                  className="w-7 h-7 rounded-full bg-lavender text-ink flex items-center justify-center hover:bg-lavender-deep transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-7 h-7 rounded-full bg-blush text-ink flex items-center justify-center hover:bg-blush-deep transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Plus className="h-3 w-3" />
                 </button>
@@ -179,14 +179,14 @@ export default function CarritoPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-3xl ring-1 ring-lavender-deep p-5 space-y-3">
+      <div className="bg-white rounded-3xl ring-1 ring-blush-deep p-5 space-y-3">
         <div className="flex justify-between text-sm text-ink/70">
           <span>Subtotal ({items.reduce((s, i) => s + i.quantity, 0)} artículos)</span>
           <span>{formatCurrency(totalPrice())}</span>
         </div>
-        <div className="flex justify-between font-bold text-ink border-t border-lavender-deep pt-3">
+        <div className="flex justify-between font-bold text-ink border-t border-blush-deep pt-3">
           <span>Total estimado</span>
-          <span className="text-violet-deep text-xl font-extrabold">{formatCurrency(totalPrice())}</span>
+          <span className="text-fuchsia-deep text-xl font-extrabold">{formatCurrency(totalPrice())}</span>
         </div>
         <p className="text-xs text-ink/70">
           * El precio final puede variar según la complejidad del diseño.
@@ -198,7 +198,7 @@ export default function CarritoPage() {
           <Button
             onClick={() => setShowForm(true)}
             size="lg"
-            className="w-full h-12 rounded-full bg-violet hover:bg-violet-deep text-white text-base font-bold shadow-lg shadow-violet/20 flex items-center justify-center gap-2"
+            className="w-full h-12 rounded-full bg-fuchsia-deep hover:bg-fuchsia-dark text-white text-base font-bold shadow-lg shadow-fuchsia/20 flex items-center justify-center gap-2"
           >
             <Send className="h-5 w-5" />
             Enviar pedido
@@ -222,7 +222,7 @@ export default function CarritoPage() {
           </Link>
         </div>
       ) : (
-        <form onSubmit={handleSubmitOrder} className="mt-6 p-5 bg-white rounded-3xl ring-1 ring-lavender-deep space-y-4">
+        <form onSubmit={handleSubmitOrder} className="mt-6 p-5 bg-white rounded-3xl ring-1 ring-blush-deep space-y-4">
           <div>
             <label htmlFor="name" className="block text-sm font-semibold text-ink mb-1">
               Tu nombre
@@ -233,7 +233,7 @@ export default function CarritoPage() {
               value={clientName}
               onChange={(e) => setClientName(e.target.value)}
               placeholder="Ej: Juan Pérez"
-              className="w-full h-11 px-4 rounded-full bg-lavender border border-transparent text-ink focus:outline-none focus:bg-white focus:ring-2 focus:ring-violet/40 focus:border-violet"
+              className="w-full h-11 px-4 rounded-full bg-blush border border-transparent text-ink focus:outline-none focus:bg-white focus:ring-2 focus:ring-fuchsia/40 focus:border-fuchsia"
             />
           </div>
 
@@ -247,7 +247,7 @@ export default function CarritoPage() {
               value={clientPhone}
               onChange={(e) => setClientPhone(e.target.value)}
               placeholder="Ej: +507 6000-0000"
-              className="w-full h-11 px-4 rounded-full bg-lavender border border-transparent text-ink focus:outline-none focus:bg-white focus:ring-2 focus:ring-violet/40 focus:border-violet"
+              className="w-full h-11 px-4 rounded-full bg-blush border border-transparent text-ink focus:outline-none focus:bg-white focus:ring-2 focus:ring-fuchsia/40 focus:border-fuchsia"
             />
           </div>
 
@@ -255,7 +255,7 @@ export default function CarritoPage() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full h-12 rounded-full bg-violet hover:bg-violet-deep text-white font-bold"
+              className="w-full h-12 rounded-full bg-fuchsia-deep hover:bg-fuchsia-dark text-white font-bold"
               size="lg"
             >
               {isSubmitting ? (

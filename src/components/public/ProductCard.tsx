@@ -78,11 +78,11 @@ export default function ProductCard({
   const disabled = outOfStock || atLimit;
 
   return (
-    <div className="group flex flex-col rounded-3xl bg-white p-3 shadow-sm ring-1 ring-lavender-deep transition-shadow duration-300 hover:shadow-xl hover:shadow-violet/10">
-      <Link href={detailHref} className="relative block aspect-square overflow-hidden rounded-2xl bg-lavender">
+    <div className="group flex flex-col rounded-3xl bg-white p-3 shadow-sm ring-1 ring-blush-deep transition-shadow duration-300 hover:shadow-xl hover:shadow-fuchsia/10">
+      <Link href={detailHref} className="relative block aspect-square overflow-hidden rounded-2xl bg-blush">
         {(() => {
           const placeholder = (
-            <div className="flex items-center justify-center h-full text-violet/40">
+            <div className="flex items-center justify-center h-full text-fuchsia/40">
               <ImageIcon className="h-16 w-16" />
             </div>
           );
@@ -101,7 +101,7 @@ export default function ProductCard({
           {getCategoryLabel(category)}
         </span>
         {allowBackorder && (
-          <span className="absolute top-3 right-3 rounded-full bg-sun px-3 py-1 text-xs font-semibold text-ink">
+          <span className="absolute top-3 right-3 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-ink">
             Bajo pedido
           </span>
         )}
@@ -110,7 +110,7 @@ export default function ProductCard({
       <div className="flex-1 space-y-3 px-1 pt-4">
         <div className="flex items-start justify-between gap-3">
           <Link href={detailHref} className="min-w-0">
-            <h3 className="font-bold text-ink line-clamp-1 hover:text-violet-deep">{name}</h3>
+            <h3 className="font-bold text-ink line-clamp-1 hover:text-fuchsia-deep">{name}</h3>
           </Link>
           <p className="shrink-0 text-lg font-extrabold text-ink">{formatCurrency(basePrice)}</p>
         </div>
@@ -119,8 +119,8 @@ export default function ProductCard({
         )}
 
         <div className="flex flex-wrap gap-1.5">
-          <span className="rounded-full bg-lavender px-2.5 py-0.5 text-xs font-medium text-violet-deep">{getTechniqueLabel(technique)}</span>
-          {material && <span className="rounded-full bg-lavender px-2.5 py-0.5 text-xs font-medium text-ink/70">{material}</span>}
+          <span className="rounded-full bg-blush px-2.5 py-0.5 text-xs font-medium text-fuchsia-deep">{getTechniqueLabel(technique)}</span>
+          {material && <span className="rounded-full bg-blush px-2.5 py-0.5 text-xs font-medium text-ink/70">{material}</span>}
         </div>
 
         <div className="space-y-2">
@@ -130,7 +130,7 @@ export default function ProductCard({
               placeholder="Nombre, texto, fecha..."
               value={customization}
               onChange={(e) => setCustomization(e.target.value)}
-              className="h-9 text-sm mt-1 rounded-xl border-lavender-deep focus-visible:ring-violet/30"
+              className="h-9 text-sm mt-1 rounded-xl border-blush-deep focus-visible:ring-fuchsia/30"
             />
           </div>
           <div>
@@ -162,7 +162,7 @@ export default function ProductCard({
               }}
               onBlur={() => setQuantity((q) => (q === "" ? 1 : q))}
               disabled={disabled}
-              className="h-9 text-sm mt-1 w-24 rounded-xl border-lavender-deep focus-visible:ring-violet/30"
+              className="h-9 text-sm mt-1 w-24 rounded-xl border-blush-deep focus-visible:ring-fuchsia/30"
             />
           </div>
         </div>
@@ -173,7 +173,7 @@ export default function ProductCard({
           type="button"
           onClick={handleAdd}
           disabled={disabled}
-          className="flex h-10 w-full items-center justify-center gap-2 rounded-full border-2 border-ink text-sm font-bold text-ink transition-colors hover:bg-ink hover:text-white disabled:cursor-not-allowed disabled:border-ink/20 disabled:text-ink/40 disabled:hover:bg-transparent"
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-full border-2 border-fuchsia-deep text-sm font-bold text-fuchsia-deep transition-colors hover:bg-fuchsia-deep hover:text-white disabled:cursor-not-allowed disabled:border-ink/20 disabled:text-ink/40 disabled:hover:bg-transparent"
         >
           <ShoppingCart className="h-4 w-4" />
           {outOfStock ? "Sin stock" : atLimit ? "Límite alcanzado" : "Agregar al carrito"}

@@ -78,7 +78,7 @@ export default function AddToCartButton({
       onClick={handleAddToCart}
       disabled={isDisabled}
       size="lg"
-      className="w-full h-12 rounded-full bg-violet text-base font-bold text-white hover:bg-violet-deep disabled:bg-ink/20 disabled:text-ink/50 disabled:opacity-100"
+      className="w-full h-12 rounded-full bg-fuchsia-deep text-base font-bold text-white hover:bg-fuchsia-dark disabled:bg-ink/20 disabled:text-ink/50 disabled:opacity-100"
     >
       <ShoppingCart className="h-4 w-4 mr-2" />
       {outOfStock ? "Sin stock" : atLimit ? "Límite alcanzado" : "Agregar al carrito"}
