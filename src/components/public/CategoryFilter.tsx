@@ -32,10 +32,10 @@ export default function CategoryFilter({ active }: { active?: string }) {
             aria-pressed={selected}
             className={cn(
               "shrink-0 inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-violet focus-visible:ring-offset-2",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia focus-visible:ring-offset-2",
               selected
-                ? "bg-violet border-violet text-white"
-                : "bg-white border-lavender-deep text-ink hover:border-violet hover:text-violet-deep"
+                ? "bg-fuchsia-deep border-fuchsia-deep text-white"
+                : "bg-white border-blush-deep text-ink hover:border-fuchsia hover:text-fuchsia-deep"
             )}
           >
             <span aria-hidden>{cat.emoji}</span>

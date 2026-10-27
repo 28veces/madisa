@@ -15,7 +15,7 @@ interface Props {
 
 function BackLink() {
   return (
-    <Link href="/catalogo" className="inline-flex items-center gap-2 text-sm font-bold text-violet-deep hover:underline mb-6">
+    <Link href="/catalogo" className="inline-flex items-center gap-2 text-sm font-bold text-fuchsia-deep hover:underline mb-6">
       <ArrowLeft className="h-4 w-4" />
       Volver al catálogo
     </Link>
@@ -32,7 +32,7 @@ export default async function ProductDetailPage({ params }: Props) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <BackLink />
-        <div className="text-center py-16 rounded-3xl bg-white ring-1 ring-lavender-deep">
+        <div className="text-center py-16 rounded-3xl bg-white ring-1 ring-blush-deep">
           <p className="text-4xl mb-3">🔎</p>
           <p className="font-bold text-ink">Producto no encontrado</p>
         </div>
@@ -47,12 +47,12 @@ export default async function ProductDetailPage({ params }: Props) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <BackLink />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-14 rounded-[2rem] bg-white p-4 sm:p-8 ring-1 ring-lavender-deep">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-14 rounded-[2rem] bg-white p-4 sm:p-8 ring-1 ring-blush-deep">
         {/* Imagen */}
-        <div className="relative flex items-center justify-center overflow-hidden rounded-3xl bg-lavender aspect-square">
+        <div className="relative flex items-center justify-center overflow-hidden rounded-3xl bg-blush aspect-square">
           {(() => {
             const placeholder = (
-              <div className="flex flex-col items-center gap-2 text-violet/50">
+              <div className="flex flex-col items-center gap-2 text-fuchsia/50">
                 <ImageIcon className="h-20 w-20" />
                 <p className="text-sm font-medium text-ink/70">Sin imagen</p>
               </div>
@@ -74,10 +74,10 @@ export default async function ProductDetailPage({ params }: Props) {
         <div className="flex flex-col gap-6 md:py-4">
           <div>
             <div className="flex flex-wrap gap-2">
-              <span className="rounded-full bg-lavender px-3 py-1 text-xs font-bold text-violet-deep">
+              <span className="rounded-full bg-blush px-3 py-1 text-xs font-bold text-fuchsia-deep">
                 {getTechniqueLabel(product.technique)}
               </span>
-              <span className="rounded-full bg-lavender px-3 py-1 text-xs font-bold text-ink/75">
+              <span className="rounded-full bg-blush px-3 py-1 text-xs font-bold text-ink/75">
                 {getCategoryLabel(product.category)}
               </span>
             </div>
@@ -87,7 +87,7 @@ export default async function ProductDetailPage({ params }: Props) {
             )}
           </div>
 
-          <div className="border-y border-lavender-deep py-5">
+          <div className="border-y border-blush-deep py-5">
             <p className="text-sm text-ink/70 mb-1">Precio base</p>
             <p className="text-4xl font-extrabold text-ink">{formatCurrency(Number(product.basePrice))}</p>
           </div>
@@ -135,11 +135,11 @@ export default async function ProductDetailPage({ params }: Props) {
           </div>
 
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <li className="flex items-center gap-2 rounded-2xl bg-lavender p-3 text-ink/80">
-              <Truck className="h-5 w-5 shrink-0 text-violet-deep" /> Envíos en todo Panamá
+            <li className="flex items-center gap-2 rounded-2xl bg-blush p-3 text-ink/80">
+              <Truck className="h-5 w-5 shrink-0 text-fuchsia-deep" /> Envíos en todo Panamá
             </li>
-            <li className="flex items-center gap-2 rounded-2xl bg-lavender p-3 text-ink/80">
-              <Sparkles className="h-5 w-5 shrink-0 text-violet-deep" /> Personalizado a tu gusto
+            <li className="flex items-center gap-2 rounded-2xl bg-blush p-3 text-ink/80">
+              <Sparkles className="h-5 w-5 shrink-0 text-fuchsia-deep" /> Personalizado a tu gusto
             </li>
           </ul>
         </div>
