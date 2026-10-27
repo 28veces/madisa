@@ -26,13 +26,13 @@ export default function SearchBar({ className }: { className?: string }) {
         maxLength={100}
         defaultValue={onCatalog ? searchParams.get("q") ?? "" : ""}
         placeholder="Buscar tazas, gorras, placas..."
-        className="h-11 w-full rounded-full border border-transparent bg-lavender pl-5 pr-12 text-sm text-ink placeholder:text-ink/65 outline-none transition focus:border-violet focus:bg-white focus:ring-2 focus:ring-violet/30"
+        className="h-11 w-full rounded-full border border-transparent bg-blush pl-5 pr-12 text-sm text-ink placeholder:text-ink/65 outline-none transition focus:border-fuchsia focus:bg-white focus:ring-2 focus:ring-fuchsia/30"
       />
       {category && <input type="hidden" name="categoria" value={category} />}
       <button
         type="submit"
         aria-label="Buscar"
-        className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-violet text-white transition hover:bg-violet-deep"
+        className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-fuchsia-deep text-white transition hover:bg-fuchsia-dark"
       >
         <Search className="h-4 w-4" />
       </button>
