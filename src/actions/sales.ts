@@ -5,7 +5,7 @@ import { requireBusiness } from "@/lib/require-auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { SaleStatus, UserRole, BusinessLine } from "@prisma/client";
-import { stockInclude, availableStock, getAverageUnitCosts, lineCost } from "@/lib/stock";
+import { stockInclude, availableStock, getAvailableStock, getAverageUnitCosts, lineCost } from "@/lib/stock";
 
 const saleItemSchema = z.object({
   inventoryItemId: z.string().min(1),
@@ -92,19 +92,64 @@ export async function createSale(data: z.infer<typeof saleSchema>) {
 
 export async function updateSaleStatus(id: string, status: SaleStatus) {
   const { businessId } = await requireBusiness([UserRole.ADMIN, UserRole.SECRETARY]);
-  const sale = await prisma.sale.findUnique({ where: { id } });
-  if (!sale || sale.businessId !== businessId) throw new Error("Sin permiso");
+  const parsedStatus = z.nativeEnum(SaleStatus).safeParse(status);
+  if (!parsedStatus.success) return { error: "Estado inválido" };
+  const newStatus = parsedStatus.data;
 
-  await prisma.sale.update({
-    where: { id },
-    data: {
-      status,
-      ...(status === SaleStatus.COMPLETED ? { deliveredAt: new Date() } : {}),
-    },
-  });
+  try {
+    await prisma.$transaction(async (tx) => {
+      const sale = await tx.sale.findFirst({
+        where: { id, businessId },
+        include: { items: { select: { inventoryItemId: true, quantity: true, backorderQuantity: true } } },
+      });
+      if (!sale) throw new Error("Sin permiso");
+
+      // Una venta cancelada no descuenta stock (US-69). Al reabrirla, las unidades que salieron
+      // del inventario deben volver a estar disponibles; las que se registraron bajo pedido
+      // siguen bajo pedido, porque ya pasaron el tope cuando se creó el pedido (US-64, US-67).
+      if (sale.status === SaleStatus.CANCELLED && newStatus !== SaleStatus.CANCELLED) {
+        const fromStock = new Map<string, number>();
+        for (const item of sale.items) {
+          const units = item.quantity - item.backorderQuantity;
+          fromStock.set(item.inventoryItemId, (fromStock.get(item.inventoryItemId) ?? 0) + units);
+        }
+        for (const [inventoryItemId, units] of fromStock) {
+          if (units <= 0) continue;
+          const available = await getAvailableStock(tx, inventoryItemId);
+          if (available < units) {
+            const item = await tx.inventoryItem.findUnique({ where: { id: inventoryItemId }, select: { description: true } });
+            throw new SaleStatusError(
+              `Stock insuficiente para reabrir la venta: "${item?.description ?? "artículo"}" tiene ${Math.max(available, 0)} disponibles y la venta necesita ${units}`
+            );
+          }
+        }
+      }
+
+      await tx.sale.update({
+        where: { id },
+        data: {
+          status: newStatus,
+          ...(newStatus === SaleStatus.COMPLETED ? { deliveredAt: new Date() } : {}),
+        },
+      });
+    });
+  } catch (error) {
+    if (error instanceof SaleStatusError) return { error: error.message };
+    throw error;
+  }
+
+  // El stock cambia al cancelar o reabrir: se refrescan inventario, catálogo y dashboard
   revalidatePath("/admin/ventas");
+  revalidatePath(`/admin/ventas/${id}`);
+  revalidatePath("/admin/inventario");
+  revalidatePath("/admin/catalogo");
+  revalidatePath("/admin");
+  revalidatePath("/catalogo");
   return { success: true };
 }
+
+// Error con un mensaje apto para mostrar al usuario al cambiar el estado de una venta
+class SaleStatusError extends Error {}
 
 export async function deleteSale(id: string) {
   const { businessId } = await requireBusiness([UserRole.ADMIN]);

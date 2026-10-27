@@ -66,6 +66,11 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio: el texto blanco pequeño va sobre fucsia profundo (5.7:1); el fucsia puro (4.1:1) solo en títulos grandes y decoración, para mantener el contraste AA de US-65. A 360 px no hay scroll horizontal.
   - Criterio: no cambia el comportamiento: buscador, filtros, carrito, bajo pedido y WhatsApp siguen igual.
   `src/app/globals.css`, `src/app/(public)/layout.tsx`, `src/app/(public)/page.tsx`, `src/app/(public)/catalogo/page.tsx`, `src/components/public/Navbar.tsx`, `src/components/public/Footer.tsx`, `src/components/public/ProductCard.tsx`, `public/images/logo.png`
+- **US-72** ⬜ Como visitante, quiero ver los productos de cada técnica en `/sublimacion`, `/dtf`, `/vdtf`, `/pintura` y `/arreglos`, para elegir según cómo quiero personalizar. Hoy esas páginas usan `getProducts`, que exige sesión, y un visitante siempre las ve vacías.
+  - Criterio: las cinco páginas obtienen los productos con la lectura pública (`getPublicProducts` con un filtro de técnica validado con Zod). Muestran solo productos activos del negocio del sitio, con stock o bajo pedido, igual que el catálogo.
+  - Criterio: cada página filtra por su técnica: Sublimación → `SUBLIMACION`, DTF → `DTF`, VDTF → `VDTF`, Pintura → `PINTADO_A_MANO`, Arreglos → `GRABADO` y `BORDADO`.
+  - Criterio: las tarjetas reciben stock, bajo pedido y tope igual que en el catálogo, así que limitan la cantidad y avisan igual (US-64, US-67).
+  - Criterio: si una técnica no tiene productos se muestra el mensaje actual ("No hay artículos … disponibles"), y si falla la consulta la página no se rompe.
 
 ## Épico C — Catálogo (panel admin)
 
@@ -109,6 +114,16 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   `src/app/(admin)/admin/ventas/[id]/page.tsx` (usa `getSale`, valida `businessId`)
   - Criterio (2026-09-22): `ADMIN`/`SECRETARY` pueden ajustar el costo de producción de cada línea desde el detalle, con la ganancia recalculada al momento (`updateSaleItemCosts`). Necesario para pedidos del catálogo público, que llegan con el costo promedio sugerido, y para personalizaciones con costo extra. `ACCOUNTANT` solo lo ve.
 - **US-24** ⬜ Como `ADMIN`, quiero filtrar/buscar ventas por cliente, rango de fechas o estado en el listado (hoy `getSales` no acepta filtros).
+- **US-69** ✅ Como `ADMIN`/`SECRETARY`, quiero que al cancelar una venta sus unidades vuelvan al inventario, para que un pedido cancelado (incluido uno falso del sitio público) no deje el stock bajo o en negativo. Hoy `src/lib/stock.ts` resta todas las ventas sin mirar su estado, y solo borrarlas devuelve el stock.
+  - Criterio: el stock disponible (`availableStock`, `getAvailableStock`) no cuenta los artículos de ventas `CANCELLED`, en el panel, en el catálogo público ni en las validaciones de venta y pedido.
+  - Criterio: al pasar una venta a `CANCELLED`, Inventario muestra las unidades de nuevo disponibles. Un producto bajo pedido cuyo faltante venía de esa venta deja de figurar con "faltan N".
+  - Criterio: reabrir una venta cancelada (pasarla a otro estado) vuelve a exigir stock dentro de una `$transaction`. Si ya no alcanza, se rechaza con "Stock insuficiente" (los productos bajo pedido siguen las reglas de US-64 y US-67).
+  - Criterio: se revisa si el dashboard, el reparto de ganancias y el costo promedio cuentan ventas canceladas, y el resultado queda anotado. Si las cuentan y no deben, se corrige aquí o se abre otra historia.
+  - Criterio (2026-10-15): al reabrir una venta cancelada se exige stock solo para las unidades que salieron del inventario (`quantity − backorderQuantity`). Las que se registraron bajo pedido siguen bajo pedido. Si el stock bajó desde el pedido original, la reapertura se rechaza, no se convierte la diferencia en bajo pedido.
+  - Criterio (2026-10-15): revisión hecha. El dashboard (`src/app/(admin)/admin/page.tsx`) y el reparto de ganancias (`src/actions/ganancias.ts`) ya excluían las ventas `CANCELLED`, y el costo promedio solo usa compras, así que no cambian. Todos los cálculos de stock pasan por `src/lib/stock.ts`: inventario, catálogo, venta manual, pedido público, salidas y borrado de compras.
+  - Bug corregido: `updateSaleStatus` no validaba el estado con Zod y el selector mostraba "Estado actualizado" aunque la acción fallara.
+  - Verificado con Playwright contra una base temporal (14 comprobaciones): un pedido de todo el stock lo deja en 0; al cancelarlo, el stock vuelve en la base, en Inventario y en el catálogo público; reabrir sin stock se rechaza con "Stock insuficiente para reabrir la venta…" y la venta sigue cancelada; con stock, reabrir funciona; en un pedido bajo pedido de 4, cancelar devuelve el faltante (−81 → −77) y reabrirlo no exige stock; un estado inventado enviado a mano devuelve "Estado inválido"; la SECRETARY también puede cancelar. Regresión: US-67 18/18 y US-65 22/22.
+  `src/lib/stock.ts:activeSaleItems`, `src/actions/sales.ts:updateSaleStatus`, `src/app/(admin)/admin/ventas/UpdateSaleStatusButton.tsx`
 
 ## Épico F — Compras y proveedores
 

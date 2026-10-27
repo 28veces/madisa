@@ -2,10 +2,13 @@ import { Prisma } from "@prisma/client";
 
 // Disponibilidad de un artículo = compras − ventas − salidas (consumo, mermas, ajustes).
 // No existe un campo de stock: siempre se calcula a partir de los movimientos.
+// Las ventas canceladas no cuentan: al cancelar, sus unidades vuelven al inventario (US-69).
+
+export const activeSaleItems = { sale: { status: { not: "CANCELLED" } } } satisfies Prisma.SaleItemWhereInput;
 
 export const stockInclude = {
   purchaseItems: { select: { quantity: true } },
-  saleItems: { select: { quantity: true } },
+  saleItems: { where: activeSaleItems, select: { quantity: true } },
   adjustments: { select: { quantity: true } },
 } satisfies Prisma.InventoryItemInclude;
 
@@ -35,7 +38,7 @@ export async function getAvailableStock(
   const where = { inventoryItemId };
   const [purchased, sold, adjusted] = await Promise.all([
     tx.purchaseItem.aggregate({ where, _sum: { quantity: true } }),
-    tx.saleItem.aggregate({ where, _sum: { quantity: true } }),
+    tx.saleItem.aggregate({ where: { ...where, ...activeSaleItems }, _sum: { quantity: true } }),
     tx.inventoryAdjustment.aggregate({ where, _sum: { quantity: true } }),
   ]);
   return (
