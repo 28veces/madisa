@@ -348,6 +348,11 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   - Criterio: los totales en pantalla tratan el campo vacío como 0 mientras se escribe, sin mostrar `NaN`.
   - Criterio (2026-10-14): el costo unitario de una línea de compra y los montos de Egresos e Inversiones empiezan vacíos en vez de 0. El valor de compra y el costo de producción de una venta son opcionales: vacíos se guardan como 0. En el carrito público, la cantidad vacía vuelve a 1 al salir del campo. Socios y Configuración ya permitían vaciar el campo.
   - Bug corregido: en Productos los mensajes de validación por campo ("Nombre requerido", "Escribe un precio válido"…) nunca se mostraban, solo el aviso genérico.
+- **US-73** ⬜ Como `ADMIN`/`SECRETARY`/`ACCOUNTANT`, quiero que el panel se vea con la letra de la app (Geist) y no con una letra de máquina de escribir (Times), para que se lea bien y se vea como parte de la misma marca. Hoy `src/app/globals.css` define `--font-sans: var(--font-sans)`, una referencia circular, así que el navegador cae a la letra serif por defecto; `src/app/layout.tsx` carga Geist en `--font-geist-sans`.
+  - Criterio: en el panel (Dashboard, Egresos, Ventas, formularios, diálogos y menú lateral) el texto se muestra en Geist; ninguna página del panel muestra letra serif.
+  - Criterio: el sitio público no cambia: sigue con su letra y con la letra manuscrita de los títulos (US-68).
+  - Criterio: si Geist no carga (sin red o bloqueada), el texto cae a una letra sin serif del sistema, no a Times.
+  - Criterio: el login y la super administración también usan Geist.
 
 ---
 
