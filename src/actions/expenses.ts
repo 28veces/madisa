@@ -18,6 +18,10 @@ const expenseSchema = z.object({
 
 export type ExpenseFormData = z.infer<typeof expenseSchema>;
 
+// Sin esta validación, un id vacío hacía que findFirst({ id: undefined, businessId })
+// devolviera el primer egreso del negocio (bug de US-63)
+const idSchema = z.string().min(1);
+
 // Al crear se puede indicar si el egreso se repite: entonces también se crea el egreso fijo,
 // así que los campos llevan los mismos límites que en recurring-expenses.ts
 const createExpenseSchema = expenseSchema.extend({
@@ -95,6 +99,9 @@ export async function updateExpense(
   formData: ExpenseFormData
 ) {
   const { businessId } = await requireBusiness(["ADMIN"]);
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return { success: false, message: "Egreso no encontrado" };
+  id = parsedId.data;
 
   try {
     const parsed = expenseSchema.parse(formData);
@@ -129,6 +136,9 @@ export async function updateExpense(
 
 export async function deleteExpense(id: string) {
   const { businessId } = await requireBusiness(["ADMIN"]);
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return { success: false, message: "Egreso no encontrado" };
+  id = parsedId.data;
 
   try {
     // Verificar que el egreso pertenece al negocio
@@ -166,6 +176,9 @@ export async function getExpenses() {
 
 export async function getExpense(id: string) {
   const { businessId } = await requireBusiness(["ADMIN", "ACCOUNTANT"]);
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return null;
+  id = parsedId.data;
 
   try {
     const expense = await prisma.expense.findFirst({
