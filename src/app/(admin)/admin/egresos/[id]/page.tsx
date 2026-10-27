@@ -3,11 +3,12 @@ import { getExpense } from "@/actions/expenses";
 import { notFound } from "next/navigation";
 
 interface EgresoPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default async function EgresoPage({ params }: EgresoPageProps) {
-  const expense = await getExpense(params.id);
+  const { id } = await params;
+  const expense = await getExpense(id);
   if (!expense) notFound();
   return (
     <div className="max-w-2xl">

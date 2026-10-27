@@ -143,10 +143,18 @@ Roles: `SUPER_ADMIN` (gestiona negocios/admins), `ADMIN` (dueño del negocio), `
   `src/actions/investments.ts` (modelo `InvestmentContribution`)
 - **US-32** ✅ Como `ADMIN`/`ACCOUNTANT`, quiero ver el resumen de aportes por socio.
   `src/actions/investments.ts:getPartnerInvestmentSummary`
-- **US-63** ⬜ Como `ADMIN`/`SECRETARY`, quiero abrir el detalle de un egreso desde el listado para ver y editar sus datos (la page `/admin/egresos/[id]` usa `params` sin `await`, y en Next 16 `params` es una Promise).
+- **US-63** 🟡 Como `ADMIN`/`SECRETARY`, quiero abrir el detalle de un egreso desde el listado para ver y editar sus datos (la page `/admin/egresos/[id]` usa `params` sin `await`, y en Next 16 `params` es una Promise).
   - Criterio: al abrir un egreso existente se muestran sus datos.
   - Criterio: un id inexistente o de otro negocio muestra "no encontrado", no un error.
   - Criterio: la page espera `params` igual que las demás pages `[id]`.
+  - Bug (2026-10-27): con `params.id` vacío, `getExpense` buscaba `{ id: undefined, businessId }` y Prisma devolvía el primer egreso del negocio, así que "Editar" abría y guardaba otro egreso.
+  `src/app/(admin)/admin/egresos/[id]/page.tsx`
+- **US-71** 🟡 Como `ADMIN`, quiero eliminar un egreso desde el listado de Egresos, además de editarlo, para corregir registros duplicados o cargados por error.
+  - Criterio: cada fila del listado tiene un botón de eliminar junto al de editar; al pulsarlo pide confirmación con la descripción del egreso y avisa que deja de contar en Ganancias y el Dashboard.
+  - Criterio: al confirmar, el egreso desaparece del listado y de los totales, con el aviso "Egreso eliminado"; al cancelar no cambia nada.
+  - Criterio: solo el `ADMIN` ve el botón; el `ACCOUNTANT` no. `deleteExpense` vuelve a exigir `ADMIN` y que el egreso sea del negocio de la sesión (si no, "Egreso no encontrado").
+  - Criterio: eliminar un egreso creado al confirmar un egreso fijo no cambia la fecha del próximo pago del egreso fijo.
+  `src/actions/expenses.ts:deleteExpense`, `src/app/(admin)/admin/egresos/DeleteExpenseButton.tsx`, `src/app/(admin)/admin/egresos/EgresosContent.tsx`, `src/app/(admin)/admin/egresos/page.tsx`
 
 ## Épico H — Socios y reparto de ganancias
 

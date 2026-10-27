@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import DeleteExpenseButton from "./DeleteExpenseButton";
 
 interface Expense {
   id: string;
@@ -24,11 +25,13 @@ interface Props {
   monthlyExpenses: number;
   // Sección de egresos fijos, que se muestra debajo del encabezado
   recurringSection?: React.ReactNode;
+  // Solo el ADMIN puede eliminar (deleteExpense lo vuelve a exigir en el servidor)
+  canManage: boolean;
 }
 
 const PAGE_SIZE = 10;
 
-export default function EgresosContent({ expenses, totalExpenses, monthlyExpenses, recurringSection }: Props) {
+export default function EgresosContent({ expenses, totalExpenses, monthlyExpenses, recurringSection, canManage }: Props) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
@@ -117,11 +120,14 @@ export default function EgresosContent({ expenses, totalExpenses, monthlyExpense
                   <td className="py-3 px-4 text-gray-500 text-xs">{formatDate(exp.expenseDate)}</td>
                   <td className="py-3 px-4 text-gray-600 text-xs">{exp.notes}</td>
                   <td className="py-3 px-4 text-right">
-                    <Link href={`/admin/egresos/${exp.id}`}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gray-700">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </Link>
+                    <div className="flex items-center justify-end gap-1">
+                      <Link href={`/admin/egresos/${exp.id}`} aria-label={`Editar ${exp.description}`}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-gray-700">
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </Link>
+                      {canManage && <DeleteExpenseButton id={exp.id} label={exp.description} />}
+                    </div>
                   </td>
                 </tr>
               ))}

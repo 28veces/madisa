@@ -36,6 +36,7 @@ export default async function EgresosPage() {
       expenses={expenses}
       totalExpenses={totalExpenses}
       monthlyExpenses={monthlyExpenses}
+      canManage={role === UserRole.ADMIN}
       recurringSection={
         <RecurringExpensesSection
           canManage={role === UserRole.ADMIN}
